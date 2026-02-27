@@ -1,2 +1,2 @@
 # ESG_data
-ESG data for reprodutibility of paper's results
+ESG data for the reproducibility of the paper's results.
