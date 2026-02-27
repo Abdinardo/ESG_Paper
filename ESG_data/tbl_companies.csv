@@ -1,0 +1,136 @@
+ID;Continent;Country;Ticket;Company Name;Leading Business;Sector (GICS);Industry (GICS)
+1;Africa;South Africa;AEGJ.J;African Equity Empowerment Investments;Investment/Holding;Financials;Diversified Financials
+2;Africa;South Africa;AELJ.J;Altron Limited;IT Services/Solutions;Information Technology;IT Services
+3;Africa;South Africa;AFEJ.J;AfroCentric Investment;Healthcare Services;Health Care;Health Care Providers
+4;Africa;South Africa;ARIJ.J;African Rainbow Minerals Ltd;Diversified Mining (PGMs, Iron Ore, Manganese);Materials;Metals & Mining
+5;Africa;South Africa;AVIJ.J;AVI Ltd;Consumer Goods;Consumer Staples;Food Products
+6;Africa;South Africa;BIDJ.J;Bid Corporation Ltd;Foodservice;Consumer Staples;Consumer Staples Distribution
+7;Africa;South Africa;CLSJ.J;Clickatell (Clicks Group);Retail Pharmacy;Consumer Staples;Consumer Staples Distribution
+8;Africa;South Africa;CSBJ.J;Cashbuild Ltd;Building Materials;Consumer Discretionary;Specialty Retail
+9;Africa;South Africa;DTCJ.J;Datatec Ltd;IT Solutions;Information Technology;IT Services
+10;Africa;South Africa;GPLJ.J;Grand Parade Inv.;Investment/Gaming;Consumer Discretionary;Hotels, Restaurants & Leisure
+11;Africa;South Africa;HARJ.J;Harmony Gold Mining Co.;Gold Mining;Materials;Metals & Mining
+12;Africa;South Africa;HDCJ.J;Hudaco Industries Ltd.;Industrial Products;Industrials;Trading Cos & Distributors
+13;Africa;South Africa;HYPJ.J;Hyprop Investments Ltd.;Retail REIT;Real Estate;Equity Real Estate (REITs)
+14;Africa;South Africa;MCGJ.J;MultiChoice Group Ltd.;Video Entertainment;Communication Services;Media
+15;Africa;South Africa;NPHJ.J;Northam Platinum;Platinum Mining;Materials;Metals & Mining
+16;Africa;South Africa;NPNJn.J;Naspers Ltd.;Internet & Media;Consumer Discretionary;Broadline Retail
+17;Africa;South Africa;SOLJ.J;Sasol Ltd.;Chemicals & Energy;Materials;Chemicals
+18;Africa;South Africa;TKGJ.J;Telkom SA SOC Ltd;Telecommunications;Communication Services;Diversified Telecom Services
+19;Africa;South Africa;TONJ.J;Tongaat Hulett Ltd;Agriculture & Agri-processing;Consumer Staples;Food Products
+20;Africa;South Africa;VKEJ.J;Vukile Property Fund Ltd;Real Estate Investment;Real Estate;Equity REITs
+21;Africa;South Africa;VODJ.J;Vodacom Group Ltd;Telecommunications;Communication Services;Wireless Telecom Services
+22;Africa;South Africa;WHLJ.J;Woolworths Holdings Ltd;Retail (Food & Fashion);Consumer Discretionary;Broadline Retail
+23;Asia;Malaysia;ASTR.KL;Astra Graphia;IT/Document Solutions;Information Technology;IT Services
+24;Asia;Malaysia;IHHH.KL;IHH Healthcare Berhad;Healthcare Services;Health Care;Health Care Providers
+25;Asia;Malaysia;IOIP.KL;IOI Properties Group;Property Development;Real Estate;Real Estate Management
+26;Asia;Malaysia;SAEN.KL;Sapura Energy Berhad;Oil & Gas Services;Energy;Energy Equip. & Services
+27;Asia;Malaysia;SIPR.KL;Sime Darby Plantation;Palm Oil Production;Consumer Staples;Food Products
+28;Asia;Malaysia;WPHB.KL;Westports Holdings Bhd;Port Operations & Logistics;Industrials;Transportation Infrastructure
+29;Asia;South Korea;000150.KS;Doosan Corporation;Heavy Industry/Energy;Industrials;Industrial Conglomerates
+30;Asia;South Korea;000240.KS;Hankook & Company;Batteries/Automotive;Industrials;Auto Parts
+31;Asia;South Korea;001230.KS;Dongkuk Steel;Steel Manufacturing;Materials;Steel
+32;Asia;South Korea;002790.KS;Amorepacific;Cosmetics/Beauty;Consumer Staples;Personal Care
+33;Asia;South Korea;004990.KS;Lotte Corporation;Retail/Food/Chemicals;Consumer Discretionary;Multi-line Retail
+34;Asia;South Korea;009150.KS;Samsung Electro-Mechanics;Electronic Components;Information Technology;Electronic Components
+35;Asia;South Korea;010950.KS;S-Oil;Petroleum Refining;Energy;Oil & Gas
+36;Asia;South Korea;011170.KS;Lotte Chemical;Chemicals/Petrochemicals;Materials;Chemicals
+37;Asia;South Korea;011200.KS;HMM;Shipping/Logistics;Industrials;Marine
+38;Asia;South Korea;011210.KS;Hyundai Wia;Auto Parts/Machinery;Industrials;Auto Parts
+39;Asia;South Korea;011780.KS;Kumho Petrochemical;Synthetic Rubber;Materials;Chemicals
+40;Asia;South Korea;015760.KS;KEPCO;Electric Utility;Utilities;Electric Utilities
+41;Asia;South Korea;023530.KS;Lotte Shopping;Retail/Department Stores;Consumer Discretionary;Multi-line Retail
+42;Asia;South Korea;028260.KS;Samsung C&T;Construction/Trading;Industrials;Construction & Engineering
+43;Asia;South Korea;035250.KS;Kangwon Land;Casino/Resort;Consumer Discretionary;Casinos & Gaming
+44;Asia;South Korea;035760.KQ;CJ ENM;Media/Entertainment;Communication Services;Movies & Entertainment
+45;Asia;South Korea;042660.KS;Hanwha Ocean;Shipbuilding;Industrials;Marine
+46;Asia;South Korea;051900.KS;LG H&H;Cosmetics/Beverages;Consumer Staples;Personal Care
+47;Asia;South Korea;051910.KS;LG Chem;Chemicals/Batteries;Materials;Chemicals
+48;Asia;South Korea;057050.KS;Hyundai BNG Steel;Stainless Steel;Materials;Steel
+49;Asia;South Korea;068270.KS;Celltrion;Biopharmaceuticals;Health Care;Pharmaceuticals
+50;Asia;South Korea;139480.KS;EMART;Hypermarket Retail;Consumer Discretionary;Food & Staples Retail
+51;Asia;South Korea;161390.KS;Hankook Tire;Tire Manufacturing;Consumer Discretionary;Auto Parts
+52;Asia;South Korea;263750.KQ;L&F;Battery Materials;Materials;Chemicals
+53;Asia;South Korea;267250.KS;Maeil Dairies;Dairy Products;Consumer Staples;Food Products
+54;Asia;South Korea;357780.KQ;Samil Pharma;Pharmaceuticals;Health Care;Pharmaceuticals
+55;Asia;Thailand;AAV.BK;Asia Aviation;Airline;Industrials;Airlines
+56;Asia;Thailand;AP.BK;AP (Thailand);Real Estate;Real Estate;Real Estate Management
+57;Asia;Thailand;AWC.BK;Asset World Corp;Hospitality;Real Estate;Real Estate Mgmt & Dev
+58;Asia;Thailand;BAFS.BK;Bangkok Aviation Fuel;Fuel Services;Energy;Oil, Gas & Consumable Fuels
+59;Asia;Thailand;BCH.BK;Bangkok Chain Hospital;Healthcare;Health Care;Health Care Providers & Svcs
+60;Asia;Thailand;BCPG.BK;BCPG Public Co;Renewable Energy;Utilities;Independent Power & Renewable
+61;Asia;Thailand;BDMS.BK;Bangkok Dusit Medical;Healthcare;Health Care;Health Care Providers & Svcs
+62;Asia;Thailand;BEC.BK;BEC World;Media/Broadcasting;Communication Services;Media
+63;Asia;Thailand;BGRIM.BK;B.Grimm Power;Power Generation;Utilities;Independent Power & Renewable
+64;Asia;Thailand;BJC.BK;Berli Jucker;Consumer/Retail;Consumer Staples;Consumer Staples Distribution
+65;Asia;Thailand;BPP.BK;Banpu Power;Energy;Utilities;Independent Power & Renewable
+66;Asia;Thailand;CRC.BK;Central Retail Corp;Retail;Consumer Discretionary;Multiline Retail
+67;Asia;Thailand;EPG.BK;Eastern Polymer Group;Polymer/Plastics;Materials;Chemicals
+68;Asia;Thailand;ERW.BK;The Erawan Group;Hospitality;Consumer Discretionary;Hotels, Restaurants & Leisure
+69;Asia;Thailand;GFPT.BK;GFPT Public Co;Poultry;Consumer Staples;Food Products
+70;Asia;Thailand;GULF.BK;Gulf Energy Development;Power Generation;Utilities;Independent Power
+71;Asia;Thailand;HMPRO.BK;Home Product Center;Home Improvement;Consumer Discretionary;Specialty Retail
+72;Asia;Thailand;IRPC.BK;IRPC PCL;Petroleum & Petrochem;Energy;Oil, Gas & Consumable Fuels
+73;Asia;Thailand;IVL.BK;Indorama Ventures;Petrochemicals;Materials;Chemicals
+74;Asia;Thailand;KEX.BK;Kerry Express (Thailand);Logistics & Delivery;Industrials;Air Freight & Logistics
+75;Asia;Thailand;MAJOR.BK;Major Cineplex Group;Cinema & Media;Communication Services;Media
+76;Asia;Thailand;NRF.BK;NR Instant Produce;Specialty Foods;Consumer Staples;Food Products
+77;Asia;Thailand;PLANB.BK;Plan B Media;Out-of-home Media;Communication Services;Media
+78;Asia;Thailand;PSH.BK;Pruksa Holding;Residential Real Estate;Real Estate;Real Estate Management
+79;Asia;Thailand;PTT.BK;PTT PCL;Oil & Gas;Energy;Oil, Gas & Consumable Fuels
+80;Asia;Thailand;RBF.BK;R&B Food Supply;Food Ingredients;Consumer Staples;Food Products
+81;Asia;Thailand;RS.BK;RS PCL;Commerce & Media;Consumer Discretionary;Broadline Retail
+82;Asia;Thailand;SCGP.BK;SCG Packaging;Packaging Solutions;Materials;Containers & Packaging
+83;Asia;Thailand;SPRC.BK;Star Petroleum Refining PCL;Petroleum Refining;Energy;Oil, Gas & Consumable Fuels
+84;Asia;Thailand;STGT.BK;Sri Trang Gloves (Thailand) PCL;Rubber Glove Manufacturing;Health Care;Health Care Equipment & Supplies
+85;Asia;Thailand;THAI.BK;Thai Airways International PCL;Air Transportation;Industrials;Passenger Airlines
+86;Asia;Thailand;TOA.BK;TOA Paint (Thailand) PCL;Decorative Paints & Coatings;Materials;Chemicals
+87;Asia;Thailand;TVO.BK;Thai Vegetable Oil PCL;Cooking Oil Production;Consumer Staples;Food Products
+88;Asia;Thailand;VGI.BK;VGI PCL;Marketing & Advertising;Communication Services;Media
+89;Asia;Thailand;WHAUP.BK;WHA Utilities and Power PCL;Utilities & Energy Services;Utilities;Multi-Utilities
+90;Asia;Turkey;AYGAZ.IS;Aygaz AS;LPG Distribution;Energy;Oil, Gas & Consumable Fuels
+91;Asia;Turkey;CIMSA.IS;Cimsa Cimento;Cement/Building;Materials;Construction Materials
+92;Asia;Turkey;MAVI.IS;Mavi Giyim Sanayi;Apparel Retail;Consumer Discretionary;Specialty Retail
+93;Asia;Turkey;MPARK.IS;MLP Saglik Hizmetleri;Medical Services;Health Care;Health Care Providers
+94;Asia;Turkey;PETKM.IS;Petkim Petrokimya;Petrochemicals;Materials;Chemicals
+95;Asia;Turkey;SOKM.IS;Sok Marketler Ticaret;Grocery Retail;Consumer Staples;Consumer Staples Retail
+96;Asia;UAE;DINV.DU;Dubai Investments;Diversified Inv.;Financials;Capital Markets
+97;Asia;UAE;EAND.AD;e& (Etisalat);Telecommunications;Communication Services;Wireless Telecom Services
+98;Asia;UAE;EMAARDEV.DU;Emaar Development;Real Estate;Real Estate;Real Estate Mgmt & Dev
+99;Europe;Turkey;AEFES.IS;Anadolu Efes;Beverages/Brewing;Consumer Staples;Beverages
+100;Europe;Turkey;AKSEN.IS;Aksa Energy;Energy Generation;Utilities;Independent Power
+101;Europe;Turkey;TATGD.IS;Tat Gida Sanayi A.S.;Packaged Food Processing;Consumer Staples;Food Products
+102;Europe;Turkey;TAVHL.IS;TAV Havalimanlari Holding AS;Airport Management;Industrials;Transportation Infrastructure
+103;Europe;UK;BMNB.L;Bannatyne Group*;Health/Leisure;Consumer Discretionary;Hotels, Restaurants & Leisure
+104;Europe;UK;FRES.L;Fresnillo PLC;Silver/Gold Mining;Materials;Metals & Mining
+105;Middle East;UAE;ADNOCDIST.AD;ADNOC Distribution;Fuel Distribution;Energy;Oil & Gas
+106;North America;Mexico;ALEATIC.MX;Aleatica;Infrastructure/Tolls;Industrials;Highways & Railtracks
+107;North America;Mexico;AMXB.MX;America Movil;Telecommunications;Communication Services;Wireless Telecom
+108;North America;Mexico;BIMBOA.MX;Grupo Bimbo;Bakery Products;Consumer Staples;Food Products
+109;North America;Mexico;FEMSAUBD.MX;FEMSA;Beverages/Retail;Consumer Staples;Beverages
+110;North America;Mexico;GRUMAB.MX;Gruma S.A.B. de C.V.;Corn Flour & Tortillas;Consumer Staples;Food Products
+111;North America;Mexico;KOFUBL.MX;Coca-Cola FEMSA;Beverages;Consumer Staples;Beverages
+112;North America;Mexico;LIVEPOLC1.MX;El Puerto de Liverpool;Department Stores;Consumer Discretionary;Broadline Retail
+113;North America;Mexico;NEMAKA.MX;Nemak S.A.B. de C.V.;Auto Components;Consumer Discretionary;Automobile Components
+114;South America;Brazil;ABEV3.SA;Ambev;Beverages;Consumer Staples;Beverages
+115;South America;Brazil;AFYA.OQ;Afya Limited;Medical Education;Consumer Discretionary;Specialized Services
+116;South America;Brazil;AZZA3.SA;Azzas 2184 (Arezzo);Fashion/Footwear;Consumer Discretionary;Textiles, Apparel & Luxury
+117;South America;Brazil;BHIA3.SA;Casas Bahia;Retail;Consumer Discretionary;Specialty Retail
+118;South America;Brazil;BRAP4.SA;Bradespar;Holding (Mining);Financials;Capital Markets
+119;South America;Brazil;BRFS3.SA;BRF S.A.;Food/Poultry;Consumer Staples;Food Products
+120;South America;Brazil;CCRO3.SA;CCR S.A.;Infrastructure;Industrials;Transportation Infrastructure
+121;South America;Brazil;CSAN3.SA;Cosan S.A.;Energy/Logistics;Energy;Oil, Gas & Consumable Fuels
+122;South America;Brazil;CYRE3.SA;Cyrela Brazil Realty;Real Estate;Real Estate;Real Estate Mgmt & Dev
+123;South America;Brazil;ELET6.SA;Eletrobras;Utilities;Utilities;Electric Utilities
+124;South America;Brazil;EMBR3.SA;Embraer;Aerospace;Industrials;Aerospace & Defense
+125;South America;Brazil;EVEN3.SA;Even Construtora;Construction;Real Estate;Real Estate Mgmt & Dev
+126;South America;Brazil;GFSA3.SA;Gafisa S.A.;Construction;Real Estate;Real Estate Mgmt & Dev
+127;South America;Brazil;GGBR4.SA;Gerdau S.A.;Steel;Materials;Metals & Mining
+128;South America;Brazil;JBSS3.SA;JBS S.A.;Meat Processing;Consumer Staples;Food Products
+129;South America;Brazil;MRVE3.SA;MRV Engenharia;Homebuilding;Consumer Discretionary;Household Durables
+130;South America;Brazil;NTCO3.SA;Natura & Co.;Cosmetics;Consumer Staples;Personal Care Products
+131;South America;Brazil;OIBR4.SA;Oi S.A.;Telecommunications;Communication Services;Telecom Services
+132;South America;Brazil;PCAR3.SA;Grupo Pão de Açúcar;Food Retail;Consumer Staples;Consumer Staples Retail
+133;South America;Brazil;PDGR3.SA;PDG Realty;Real Estate;Real Estate;Real Estate Management
+134;South America;Brazil;PETR4.SA;Petrobras;Integrated Oil & Gas;Energy;Oil, Gas & Consumable Fuels
+135;South America;Brazil;POMO4.SA;Marcopolo S.A.;Bus Manufacturing;Industrials;Machinery
