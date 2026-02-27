@@ -1,4 +1,4 @@
-company;year;country;error;mepa;disper;ESGScore;ESGComb;ENVPillar;SocialPillar;GovPillar;qanalyst
+ticket;year;country;error;mepa;disper;ESGScore;ESGComb;ENVPillar;SocialPillar;GovPillar;qanalyst
 AFEJ.J;2023;South Africa;0.937;0.000;0.059;15.00;15.00;15.00;17.00;15.00;2
 AFEJ.J;2022;South Africa;0.949;0.949;0.000;59.09;59.09;45.95;56.62;77.00;1
 AFEJ.J;2021;South Africa;0.000;0.000;0.000;60.85;60.85;40.14;65.55;77.00;0
