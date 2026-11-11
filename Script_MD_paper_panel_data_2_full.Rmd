@@ -1,0 +1,2731 @@
+---
+title: "Materialidade ESG e acurácia das previsões de analistas: uma análise exploratória de casos informativos em economias emergentes"
+output:
+  pdf_document: 
+    fig_width: 9
+    fig_height: 5
+    fig_caption: true
+    latex_engine: xelatex
+  html_document: default
+date: "`r Sys.Date()`"
+classoption: landscape
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T,message=F, warning=F, error=F)
+formato_tbl <- ifelse(T,"html","latex") # T para ver no R, F para saída em PDF
+```
+
+## Carregamento das bibliotecas
+
+Aqui são carregadas todas as bibliotecas necessárias para a execução dos códigos:
+
+```{r message=FALSE}
+library(readxl); library(plm); library(dplyr) #; library(stargazer); 
+library(ggplot2); library(modelsummary); library(cluster)
+library(stringr); library(tictoc); library(janitor); library(tidyr); library(purrr)
+library(ggpmisc); library(ggsci); library(furrr); library(patchwork)
+```
+
+## Carregamento do arquivo com os dados ESG
+
+Aqui os dados winsorizados são carregados para a variável *bd*.
+
+```{r}
+bd <- read.delim(
+ file = "https://github.com/Abdinardo/ESG_Paper/raw/main/ESG_data/BD_ESG_WIN_FULL.csv",
+ sep = ","
+) |> clean_names() |> select(-error)
+```
+
+## Estatística descritiva
+
+Aqui são mostrados os resultados das estatísticas descritivas das variáveis
+
+```{r}
+bd |> select(-c(1:3)) |>
+pivot_longer(cols = everything(),names_to = "Variable",values_to = "Value") |>
+summarise(
+ Media = mean(Value,na.rm=T),
+ Mediana = median(Value,na.rm=T),
+ DP = sd(Value,na.rm=T),
+ Minimo = min(Value,na.rm=T),
+ Maximo = max(Value,na.rm=T),
+ .by = Variable
+) |> knitr::kable(
+ format = formato_tbl,
+ digits = 3,
+ table.attr = "style='color: white;'",
+ align = "rrrrr"
+)
+```
+
+Aqui é mostrada a tabela de frequência de empresas por país
+
+```{r}
+bd |> distinct(country,ticket) |> count(country) |> arrange(desc(n)) |>
+mutate(
+ freq_rel = round(100 * n / sum(n),2),
+ freq_acum = round(cumsum(freq_rel),2)
+)|> knitr::kable(
+ format = formato_tbl,
+ digits = 1,
+ table.attr = "style='color: white;'",
+ align = "rrrr"
+)
+```
+
+## Cálculo das correlações correlações para bd_com
+
+Aqui são calculadas as correlações de Pearson entre todas as variáveis presentes em *bd*. Os calculos foram paralelizados pelo uso da função *future_map_dfr* para acelerar o processamento.
+
+Também aqui são selecionadas todas as correlações que sejam maiores que 0.77 (em valores absolutos), com significância estatística de 5%. A escolha desse limiar se dá porque ele ao quadrado representa o coeficiente de determinação (R²), indicando, pelo menos, 60% de explicação da variância de um modelo de regressão linear simples.
+
+```{r message=FALSE, warning=FALSE}
+# Função para calcular as correlações, p-valores e R²
+fct_correlacao <- function(df,tipo = "pearson"){
+ resultado <- Hmisc::rcorr(as.matrix(df[,-c(1,9)]),type = tipo)
+
+ correlacao <- resultado$r[3:7,1:2] |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column(var = "P2") |>
+  pivot_longer(cols = -P2,names_to = "P1",values_to = "r") |> 
+  arrange(P1) |>
+  relocate(P2,.after = P1)
+
+ corr_pvalor <- resultado$P[3:7,1:2] |> 
+  as.data.frame() |> 
+  tibble::rownames_to_column(var = "P2") |>
+  pivot_longer(cols = -P2,names_to = "P1",values_to = "p_value") |> 
+  arrange(P1) |>
+  relocate(P2,.after = P1)
+
+ resposta <- inner_join(correlacao,corr_pvalor,by=join_by(P1,P2)) |>
+  mutate(
+   r = round(r,3),
+   R2 = round(100*r^2,2),
+   p_value = round(p_value,3),
+   status = ifelse(r < 0,"Correlação negativa","Correlação positiva"),
+   ticket = unique(df$ticket)
+  )
+ return(resposta)
+}
+```
+
+## Cálculo das correlações de Pearson
+
+```{r}
+tic()
+plan(multisession, workers = 3)
+bd_corr_all_pearson <- bd |>
+ select(-c(2:3)) |>
+ split(~ticket) |>
+ future_map_dfr(~fct_correlacao(.x),.progress = T) |>
+ drop_na()  
+plan(sequential)
+toc()
+bd_corr_chosen_pearson <- bd_corr_all_pearson |> filter(p_value < 0.05)
+```
+
+## Cálculo das correlações de Spearman
+
+```{r}
+tic()
+plan(multisession, workers = 3)
+bd_corr_all_spearman <- bd |>
+ select(-c(2:3)) |>
+ split(~ticket) |>
+ future_map_dfr(\(x) fct_correlacao(x,tipo = "spearman"),.progress = T) |>
+ drop_na()  
+plan(sequential)
+toc()
+bd_corr_chosen_spearman <- bd_corr_all_spearman |> filter(p_value < 0.05)
+```
+
+## Resultado das correlações de Pearson
+
+```{r}
+print(glue::glue("Total de correlações de Pearson: {nrow(bd_corr_all_pearson)} de {2*5*550} possibilidades."))
+print(glue::glue("Total de empresas que atenderam ao critério de seleção: {length(unique(bd_corr_chosen_pearson$ticket))} de 550 possibilidades."))
+```
+
+## Resultado das correlações de Spearman
+
+```{r}
+print(glue::glue("Total de correlações de Spearman: {nrow(bd_corr_all_spearman)} de {2*5*550} possibilidades."))
+print(glue::glue("Total de empresas que atenderam ao critério de seleção: {length(unique(bd_corr_chosen_spearman$ticket))} de 550 possibilidades."))
+```
+
+## Escolha das empresas que tiveram correlações significativas em ambos os critérios (Pearson e Spearman)
+
+```{r}
+bd_corr_chosen <- inner_join(
+ x = bd_corr_chosen_pearson,
+ y = bd_corr_chosen_spearman,
+ by = join_by(ticket,P1,P2,status)
+)
+
+print(glue::glue("Total de empresas que atenderam aos ambos critérios de seleção (Pearson e Spearman): {length(unique(bd_corr_chosen$ticket))} de 550 possibilidades."))
+```
+
+## Prompt para obter dados das empresas relevantes via IA.
+
+Aqui é o prompt utilizado para pesquisar os dados das empresas por ticket que apresentaram correlações relevantes. Basta copiar e colar na IA de tua preferência. Aqui foi utilizado o Google Gemini.
+
+```{r}
+# AItext <- glue::glue('
+#  For each ticket separated by commas, tell me which company it is.
+#  Show the results in a structured table with the following columns: ID, continent, ticket,
+#  country, company name, leading business, sector (GICS), and industry (GICS).
+#  Sort the table by continent and country.
+#  The tickets are: {paste(unique(bd_corr_chosen$ticket),collapse=", ")}
+# ')
+# print(AItext)
+```
+
+## Estatística descritiva para as empresas relevantes
+
+Aqui são carregados os dados das empresas relevantes.
+
+```{r}
+# tbl_companies <- read.delim(
+#  file = "https://github.com/Abdinardo/ESG_Paper/raw/main/ESG_data/tbl_companies_68.csv",
+#  sep = ";"
+# ) |> clean_names()
+```
+
+Tabela de frequência por GICS sector.
+
+```{r}
+# tbl_companies |>
+# count(sector_gics) |>
+# arrange(desc(n)) |>
+# mutate(
+#  freq_rel = round(100 * n / sum(n),1),
+#  freq_acum = round(cumsum(freq_rel),1)
+# )|> knitr::kable(
+#  format = formato_tbl,
+#  #digits = 4,
+#  table.attr = "style='color: white;'",
+#  align = "rrrr"
+# )
+```
+
+Tabela de frequência por país
+
+```{r}
+# tbl_companies |>
+# count(country) |>
+# arrange(desc(n)) |>
+# mutate(
+#  freq_rel = round(100 * n / sum(n),1),
+#  freq_acum = round(cumsum(freq_rel),1)
+# )|> knitr::kable(
+#  format = formato_tbl,
+#  #digits = 4,
+#  table.attr = "style='color: white;'",
+#  align = "rrrr"
+# )
+```
+
+## Estatística descritiva das variáveis dependentes, de interesse e de controle para as empresaas que tiveram correlação estatística atendida pelo critério de seleção adotado neste estudo. Resultados por país.
+
+```{r}
+# bd |> 
+# filter(ticket %in% tbl_companies$ticket) |>
+# select(-c(1:3)) |>
+#   pivot_longer(cols = everything(),names_to = "Variable",values_to = "Value") |>
+#   summarise(
+#     Minimo = min(Value,na.rm=T),
+#     Q1 = quantile(Value,na.rm=T,probs=0.25),
+#     Mediana = median(Value,na.rm=T),
+#     Q3 = quantile(Value,na.rm=T,probs=0.75),
+#     Maximo = max(Value,na.rm=T),
+#     Media = mean(Value,na.rm=T),
+#     DP = sd(Value,na.rm=T),
+#     CV = DP/Media,
+#     N = n(),
+#     .by = Variable
+#   ) |> knitr::kable(
+#     format = formato_tbl,
+#     digits = 3,
+#     table.attr = "style='color: white;'",
+#     align = "rrrrr"
+#   )  
+```
+
+## Gráficos Boxplot para as correlações de Pearson significativas entre as variáveis de interesse e as variáveis dependentes
+
+Aqui são construídos gráficos boxplot mostrando as quantidades de correlações encontradas por variável dependente (disper, mape) e variável de interesse (esg_score, esg_comb, env_pillar, social_pillar, gov_pillar). Correlação de Pearson.
+
+```{r}
+cores <- c("#5050FFFF","#CE3D32FF","#749B58FF","#F0E685FF","#466983FF")
+names(cores) <- sort(unique(bd_corr_chosen$P2))
+tamanho_eixos <- 6
+
+counts_pearson <- bd_corr_chosen |>
+group_by(P2, status, P1) |>
+summarise(n_obs = n(),y_med_r = max(r.x, na.rm = TRUE)*1.01,
+ y_med_r2 = max(R2.x, na.rm = TRUE)*1.01,.groups = "drop")
+
+Plot1_pearson <- bd_corr_chosen |>
+ggplot(aes(x = P2, y = r.x, fill = P2)) +
+geom_boxplot(alpha = 0.6, outlier.shape = NA, width = 0.6) +
+geom_jitter(color = "black", alpha = .5, width = 0.25, height = 0,size=1.1) +
+geom_text(data = counts_pearson,
+ aes(x = P2, y = y_med_r, label = n_obs, group = P2),
+ color = "red", fontface = "bold", size = 4, inherit.aes = FALSE, position = position_jitter(width=0.25,height=0.05,seed=123)) +
+scale_fill_manual(values = cores) +
+labs(x = "Índices ESG",y = "Valores de correlação",fill = "",
+ caption = "Em vermelho: nº de empresas.") +
+scale_y_continuous(n.breaks = 5,expand = expansion(mult = c(0.05, 0.15)),
+ labels = scales::label_number(accuracy = 0.01,big.mark=",")
+) +
+scale_x_discrete(
+ labels = c(
+  "env_pillar" = "ambiental",
+  "social_pillar" = "social",
+  "gov_pillar" = "governança",
+  "esg_score" = "escore esg",
+  "esg_comb" = "esg comb."
+  )
+) +
+theme_bw() +
+theme(
+ axis.text = element_text(size=tamanho_eixos,face="bold"),
+ axis.title = element_text(size=tamanho_eixos,face="bold"),
+ strip.text = element_text(size=tamanho_eixos,face="bold"),
+ legend.position = "none"
+) +
+facet_wrap(~ status + P1, scales = "free_y")
+
+Plot2_pearson <- bd_corr_chosen |>
+ggplot(aes(x = P2, y = R2.x, fill = P2)) +
+geom_boxplot(alpha = 0.6, outlier.shape = NA, width = 0.6) +
+geom_jitter(color = "black", alpha = .5, width = 0.25, height = 0,size=1.1) +
+geom_text(data = counts_pearson,
+ aes(x = P2, y = y_med_r2, label = n_obs, group = P2),
+ color = "red", fontface = "bold", size = 4, inherit.aes = FALSE, position = position_jitter(width=0.25,height=0,seed=123)) +
+scale_fill_manual(values = cores) +
+labs(x = "Índices ESG",y = "Valor do coeficiente de determinação (R²)",fill = "",
+ caption = "Em vermelho: nº de empresas.") +
+scale_y_continuous(n.breaks = 5,expand = expansion(mult = c(0.05, 0.15)),
+ labels = scales::label_number(accuracy = 1,big.mark=",")
+) +
+scale_x_discrete(
+ labels = c(
+  "env_pillar" = "ambiental",
+  "social_pillar" = "social",
+  "gov_pillar" = "governança",
+  "esg_score" = "escore esg",
+  "esg_comb" = "esg comb."
+  )
+) +
+theme_bw() +
+theme(
+ axis.text = element_text(size=tamanho_eixos,face="bold"),
+ axis.title = element_text(size=tamanho_eixos,face="bold"),
+ strip.text = element_text(size=tamanho_eixos,face="bold"),
+ legend.position = "none"
+) +
+facet_wrap(~ status + P1, scales = "free_y")
+```
+
+```{r}
+Plot1_pearson
+```
+
+# Amplitude das correlações de Pearson negativas
+
+```{r}
+bd_corr_chosen |> filter(status == "Correlação negativa") |> pull(r.x) |> range()
+```
+
+# Amplitude das correlações de Pearson positivas
+
+```{r}
+bd_corr_chosen |> filter(status == "Correlação positiva") |> pull(r.x) |> range()
+```
+
+# Execução do teste Kruskall-Wallis para verificar se há diferença estatística significativa entre as medianas dos boxplots para as correlações de Pearson acima mostradas
+
+```{r}
+#Correlações
+combinacoes_kw <- crossing(
+ Status = c("Correlação positiva","Correlação negativa"),
+ VD = c("mape","disper")
+)
+
+lista_kw <- pmap(combinacoes_kw,\(Status,VD){
+ D1 <- bd_corr_chosen |> filter(status == Status,P1 == VD)
+ kruskal.test(r.x ~ P2, data = D1)
+})
+
+names(lista_kw) <- str_c(combinacoes_kw$Status,combinacoes_kw$VD,sep = "_")
+lista_kw
+```
+
+```{r}
+Plot2_pearson
+```
+
+# Amplitude dos coeficientes de determinação (R²) das correlações de Pearson negativas
+
+```{r}
+bd_corr_chosen |> filter(status == "Correlação negativa") |> pull(R2.x) |> range()
+```
+
+# Amplitude dos coeficientes de determinação (R²) das correlações de Pearson positivas
+
+```{r}
+bd_corr_chosen |> filter(status == "Correlação positiva") |> pull(R2.x) |> range()
+```
+
+# Execução do teste Kruskall-Wallis para verificar se há diferença estatística significativa entre as medianas dos boxplots para os coeficientes de determinação acima mostrados
+
+```{r}
+#Coeficientes de determinação
+lista_KW <- pmap(combinacoes_kw,\(Status,VD){
+ D1 <- bd_corr_chosen |> filter(status == Status,P1 == VD)
+ kruskal.test(R2.x ~ P2, data = D1)
+})
+
+names(lista_KW) <- str_c(combinacoes_kw$Status,combinacoes_kw$VD,sep = "_")
+lista_KW
+```
+
+## Gráficos Boxplot para as correlações de Spearman significativas entre as variáveis de interesse e as variáveis dependentes
+
+Aqui são construídos gráficos boxplot mostrando as quantidades de correlações encontradas por variável dependente (disper, mape) e variável de interesse (esg_score, esg_comb, env_pillar, social_pillar, gov_pillar). Correlação de Spearman.
+
+```{r}
+cores <- c("#5050FFFF","#CE3D32FF","#749B58FF","#F0E685FF","#466983FF")
+names(cores) <- sort(unique(bd_corr_chosen$P2))
+tamanho_eixos <- 6
+
+counts_spearman <- bd_corr_chosen |>
+group_by(P2, status, P1) |>
+summarise(n_obs = n(),y_med_r = max(r.y, na.rm = TRUE)*1.01,
+ y_med_r2 = max(R2.y, na.rm = TRUE)*1.01,.groups = "drop")
+
+Plot1_spearman <- bd_corr_chosen |>
+ggplot(aes(x = P2, y = r.y, fill = P2)) +
+geom_boxplot(alpha = 0.6, outlier.shape = NA, width = 0.6) +
+geom_jitter(color = "black", alpha = .5, width = 0.25, height = 0,size=1.1) +
+geom_text(data = counts_spearman,
+ aes(x = P2, y = y_med_r, label = n_obs, group = P2),
+ color = "red", fontface = "bold", size = 4, inherit.aes = FALSE, position = position_jitter(width=0.25,height=0.05,seed=123)) +
+scale_fill_manual(values = cores) +
+labs(x = "Índices ESG",y = "Valores de correlação",fill = "",
+ caption = "Em vermelho: nº de empresas.") +
+scale_y_continuous(n.breaks = 5,expand = expansion(mult = c(0.05, 0.15)),
+ labels = scales::label_number(accuracy = 0.01,big.mark=",")
+) +
+scale_x_discrete(
+ labels = c(
+  "env_pillar" = "ambiental",
+  "social_pillar" = "social",
+  "gov_pillar" = "governança",
+  "esg_score" = "escore esg",
+  "esg_comb" = "esg comb."
+  )
+) +
+theme_bw() +
+theme(
+ axis.text = element_text(size=tamanho_eixos,face="bold"),
+ axis.title = element_text(size=tamanho_eixos,face="bold"),
+ strip.text = element_text(size=tamanho_eixos,face="bold"),
+ legend.position = "none"
+) +
+facet_wrap(~ status + P1, scales = "free_y")
+
+Plot2_spearman <- bd_corr_chosen |>
+ggplot(aes(x = P2, y = R2.y, fill = P2)) +
+geom_boxplot(alpha = 0.6, outlier.shape = NA, width = 0.6) +
+geom_jitter(color = "black", alpha = .5, width = 0.25, height = 0,size=1.1) +
+geom_text(data = counts_spearman,
+ aes(x = P2, y = y_med_r2, label = n_obs, group = P2),
+ color = "red", fontface = "bold", size = 4, inherit.aes = FALSE, position = position_jitter(width=0.25,height=0,seed=123)) +
+scale_fill_manual(values = cores) +
+labs(x = "Índices ESG",y = "Valor do coeficiente de determinação (R²)",fill = "",
+ caption = "Em vermelho: nº de empresas.") +
+scale_y_continuous(n.breaks = 5,expand = expansion(mult = c(0.05, 0.15)),
+ labels = scales::label_number(accuracy = 1,big.mark=",")
+) +
+scale_x_discrete(
+ labels = c(
+  "env_pillar" = "ambiental",
+  "social_pillar" = "social",
+  "gov_pillar" = "governança",
+  "esg_score" = "escore esg",
+  "esg_comb" = "esg comb."
+  )
+) +
+theme_bw() +
+theme(
+ axis.text = element_text(size=tamanho_eixos,face="bold"),
+ axis.title = element_text(size=tamanho_eixos,face="bold"),
+ strip.text = element_text(size=tamanho_eixos,face="bold"),
+ legend.position = "none"
+) +
+facet_wrap(~ status + P1, scales = "free_y")
+```
+
+```{r}
+Plot1_spearman
+```
+
+# Amplitude das correlações de Spearman negativas
+
+```{r}
+bd_corr_chosen |> filter(status == "Correlação negativa") |> pull(r.y) |> range()
+```
+
+# Amplitude das correlações de Spearman positivas
+
+```{r}
+bd_corr_chosen |> filter(status == "Correlação positiva") |> pull(r.y) |> range()
+```
+
+# Execução do teste Kruskall-Wallis para verificar se há diferença estatística significativa entre as medianas dos boxplots para as correlações de Spearman acima mostradas
+
+```{r}
+#Correlações
+combinacoes_kw <- crossing(
+ Status = c("Correlação positiva","Correlação negativa"),
+ VD = c("mape","disper")
+)
+
+lista_kw <- pmap(combinacoes_kw,\(Status,VD){
+ D1 <- bd_corr_chosen |> filter(status == Status,P1 == VD)
+ kruskal.test(r.y ~ P2, data = D1)
+})
+
+names(lista_kw) <- str_c(combinacoes_kw$Status,combinacoes_kw$VD,sep = "_")
+lista_kw
+```
+
+```{r}
+Plot2_spearman
+```
+
+# Amplitude dos coeficientes de determinação (R²) das correlações de Spearman negativas
+
+```{r}
+bd_corr_chosen |> filter(status == "Correlação negativa") |> pull(R2.y) |> range()
+```
+
+# Amplitude dos coeficientes de determinação (R²) das correlações de Spearman positivas
+
+```{r}
+bd_corr_chosen |> filter(status == "Correlação positiva") |> pull(R2.y) |> range()
+```
+
+# Execução do teste Kruskall-Wallis para verificar se há diferença estatística significativa entre as medianas dos boxplots para os coeficientes de determinação acima mostrados
+
+```{r}
+#Coeficientes de determinação
+lista_KW <- pmap(combinacoes_kw,\(Status,VD){
+ D1 <- bd_corr_chosen |> filter(status == Status,P1 == VD)
+ kruskal.test(R2.y ~ P2, data = D1)
+})
+
+names(lista_KW) <- str_c(combinacoes_kw$Status,combinacoes_kw$VD,sep = "_")
+lista_KW
+```
+
+## Definição dos modelos e da lista que os armazenará
+
+Aqui serão armazenados numa lista seis tipos de modelos para serem testados nos dados em painel: Pooling, Within, Between, Random-swar, Random-walhus, Random-nerlove.
+
+```{r}
+combinacoes <- crossing(
+  Sinal = c("positivo","negativo"),
+  VD = c("mape","disper"),
+  VI = c("esg_score","esg_comb","env_pillar","social_pillar","gov_pillar")
+)
+lista_corr_signal <- pmap(combinacoes,\(Sinal,VD,VI){
+  if(Sinal == "negativo"){
+    filter(bd_corr_chosen, r.x < 0, P1 == VD, P2 == VI)
+  }else{
+    filter(bd_corr_chosen, r.x > 0, P1 == VD, P2 == VI)
+  }
+})
+names(lista_corr_signal) <- str_c(combinacoes$Sinal,combinacoes$VD,combinacoes$VI,sep = "_")
+
+lista_modelos <- list()
+modelos <- c("pooling","within","random")
+modelos_random <- c("swar","walhus","nerlove")
+variaveis_controle <- last(colnames(bd))
+lista_equacoes <- pmap(combinacoes,\(Sinal,VD,VI){
+ if(Sinal == "positivo"&&VD == "disper"&&VI == "gov_pillar"){
+  formula(paste0(VD," ~ ",paste(c(VI,variaveis_controle[-1]),collapse = "+")))
+ }else{
+  formula(paste0(VD," ~ ",paste(c(VI,variaveis_controle),collapse = "+"))) 
+ }
+})
+
+names(lista_equacoes) <- str_c(combinacoes$Sinal,combinacoes$VD,combinacoes$VI,sep = "_")
+nomes <- names(lista_equacoes)
+```
+
+## Cálculo de todos os modelos
+
+Aqui ocorre o cálculo de todos os modelos aplicados para dados em painel.
+
+```{r message=F, warning=F, error=F}
+for(equacao in names(lista_equacoes)){
+ for(modelo in modelos){
+  if(modelo != "random"){
+   lista_modelos[paste0(equacao,"_",modelo)] <- list(
+    try(plm(lista_equacoes[[equacao]],
+       filter(bd,ticket %in% lista_corr_signal[[equacao]]$ticket),
+       model = modelo,index = c('ticket', 'year'),effect = "twoways"),silent = T)
+   )
+  }else{
+   for(modelo_random in modelos_random){
+    lista_modelos[paste0(equacao,"_",modelo,"_",modelo_random)] <-list(
+     try(plm(lista_equacoes[[equacao]],
+         filter(bd,ticket %in% lista_corr_signal[[equacao]]$ticket),
+         model = modelo,random.method = modelo_random,index = c('ticket', 'year'),effect = "twoways"),
+         silent = T)
+    )
+   }
+  }
+ }
+}
+```
+
+## Função para criar os gráficos
+
+Aqui é criada uma função para elaborar os gráficos de acordo com às mudanças das variáveis dependentes (VD) e independentes (VI).
+
+```{r}
+funcao_grafico <- function(i,posicaoX,textoX,textoY){
+ paises <- lista_corr_signal[[i]]$ticket
+ textoRodape <- paste0("Country of origin: ",
+  paste(
+   unique(
+    case_when(
+     str_detect(paises,".KS$") ~ "KS: South Korea",
+     str_detect(paises,".KQ$") ~ "KQ: South Korea",
+     str_detect(paises,".BK$") ~ "BK: Thailand",
+     str_detect(paises,".J$") ~  "J: South Africa",
+     str_detect(paises,".IS$") ~ "IS: Turkey",
+     str_detect(paises,".SA$") ~ "SA: Brazil",
+     str_detect(paises,".OQ$") ~ "OQ: Brazil",
+     str_detect(paises,".MX$") ~ "MX: Mexico",
+     str_detect(paises,".DU$") ~ "DU: United Arab Emirates",
+     str_detect(paises,".AD$") ~ "AD: United Arab Emirates",
+     str_detect(paises,".KL$") ~ "KL: Malaysia",
+     .default =  "L: Mexico"
+    )
+   ), collapse = "; "
+  ),"."
+ )
+
+ bd |>
+ filter(ticket %in% paises) |>
+ ggplot(aes(x=.data[[combinacoes$VI[i]]],
+  y=.data[[combinacoes$VD[i]]],group=ticket,color=ticket)) +
+ geom_smooth(method = "lm",formula = "y ~ x",se=F,linewidth=1.5,linetype="solid") +
+ geom_point(size=2) +
+ scale_color_manual(values = pal_igv("default")(length(paises))) +
+ stat_poly_eq(
+  aes(label = paste(after_stat(rr.label), sep = "~~~")),  # Apenas o R²
+  formula = y ~ x,
+  parse = TRUE,   # Permite exibir com formatação matemática
+  size = 4,       # Tamanho do texto
+  label.x = posicaoX, # Posição horizontal (right, left, center)
+  label.y = "top"    # Posição vertical (top, bottom, center)
+ ) +
+ labs(
+  x=textoX,
+  y=textoY,
+  color="Company",
+  caption = textoRodape
+ )+
+ theme_bw() +
+ theme(
+  axis.title = element_text(size=10,face="bold"),
+  axis.text = element_text(size=11),
+  legend.text = element_text(size=11),
+  #legend.position = "none",
+  plot.caption = element_text(size=11,hjust = 0.05),
+  plot.caption.position = "plot"
+ )
+}
+```
+
+## Função para o Teste de Hausman
+
+Aqui é criada uma função customizada para calcular o teste de Hausman. O *modelo1* é o de efeitos fixos e o *modelo2* é o de efeitos aleatórios.
+
+```{r}
+funcao_hausman <- function(modelo1,modelo2){
+ teste <- phtest(modelo1,modelo2, method = "aux",
+  vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster") 
+    #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group")
+  )
+ texto1 <- glue::glue("Modelo escolhido: {ifelse(teste$p.value < 0.05,'Efeitos Fixos','Efeitos Aleatórios')}. P-Valor: {round(teste$p.value,3)}. ")
+ texto2 <- if(teste$p.value > 0.05) glue::glue("Coeficiente Theta (θ): {round(modelo2$ercomp$theta$id,3)}.")
+ return(paste0(texto1,texto2))
+}
+```
+
+## Função para o teste de autocorrelação
+
+Aqui é criada uma função customizada para calcular os testes de autocorrelação: o teste de Wooldridge para correlação serial em modelo de efeitos fixos e o teste de Baltagi and Li para correlação serial em modelo de efeitos aleatórios. O *modelo1* é o de efeitos fixos e o *modelo2* é o de efeitos aleatórios.
+
+```{r}
+funcao_autocorrelacao <- function(modelo1,modelo2){
+ if(str_detect(funcao_hausman(modelo1,modelo2),"Efeitos Fixos")){
+  # pwartest(modelo1, vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster")
+  #  #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group")
+  # )
+   pbgtest(modelo1)
+ }else{
+  # pbltest(modelo2, vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster")
+  #  #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group")
+  # )
+   pbgtest(modelo2)
+ }
+}
+```
+
+## Gráfico para Sinal = negativo, VD = disper, VI = env_pillar
+
+```{r warning=FALSE}
+#valor_lista <- 1 # Variável para mudar a lista de dados a ser visualizada
+#G1 <- funcao_grafico(valor_lista,"right","Environmental Pillar Score",
+#    "Dispersion of analysts' forecasts")
+#G1
+```
+
+## Modelos para Sinal = negativo, VD = disper, VI = env_pillar
+
+```{r warning=FALSE}
+valor_lista <- 1 # Variável para mudar a lista de dados a ser visualizada
+resposta1 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos1 <- paste0("M",1:length(resposta1)," - ",names(resposta1))
+names(resposta1) <- paste0("M",1:length(resposta1))
+
+# stargazer(resposta1,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta1,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,3)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"), 
+   #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = negativo disper env pillar"
+)
+rotulos1
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = negative, VD = disper, VI = env_pillar
+
+```{r}
+funcao_hausman(resposta1[[2]],resposta1[[3]])
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+funcao_autocorrelacao(resposta1[[2]],resposta1[[3]])
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta1[[3]],test = 'cd')
+```
+
+## Aplicando a modelagem dinâmica para painéis pequenos com poucos grupos (N < T) com a correção de variância-covariância Driscoll-Kraay (1998)
+
+```{r}
+resposta1_within <- plm(
+  disper ~ lag_disper + env_pillar + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[1]]$ticket),
+    lag_disper = lag(disper),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "within", effect = "twoways"
+)
+
+resposta1_random <- plm(
+  disper ~ lag_disper + env_pillar + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[1]]$ticket),
+    lag_disper = lag(disper),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "random", effect = "twoways"
+)
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios
+
+```{r}
+funcao_hausman(resposta1_within,resposta1_random)
+```
+
+## Sumário do modelo escolhido pelo teste de Hausman
+
+
+```{r}
+summary(resposta1_within,vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"))
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+pbgtest(resposta1_within)
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta1_within)
+```
+
+## Aplicando o modelo GMM para disper, sem lag(env_pillar)
+
+```{r}
+resposta1_GMM_a <- pgmm(
+ formula = disper ~ lag(disper) + env_pillar + qanalyst | lag(disper, 2:3),
+ data = filter(bd,ticket %in% lista_corr_signal[[1]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta1_GMM_a, robust = T)
+```
+## Aplicando o modelo GMM para disper, com lag(env_pillar)
+
+```{r}
+resposta1_GMM_b <- pgmm(
+ formula = disper ~ lag(disper) + lag(env_pillar) + env_pillar + qanalyst |
+  lag(disper, 2:3) + lag(env_pillar, 2:3),
+ data = filter(bd,ticket %in% lista_corr_signal[[1]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta1_GMM_b, robust = T)
+```
+
+## Gráfico para Sinal = negativo, VD = disper, VI = esg_comb
+
+```{r warning=FALSE}
+#valor_lista <- 2 # Variável para mudar a lista de dados a ser visualizada
+#G2 <- funcao_grafico(valor_lista,"right","ESG Combined Score",
+# "Dispersion of analysts' forecasts")
+#G2
+```
+
+## Modelos para Sinal = negativo, VD = disper, VI = esg_comb
+
+```{r warning=FALSE}
+valor_lista <- 2 # Variável para mudar a lista de dados a ser visualizada
+resposta2 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos2 <- paste0("M",1:length(resposta2)," - ",names(resposta2))
+names(resposta2) <- paste0("M",1:length(resposta2))
+
+# stargazer(resposta2,type="text",
+#     dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta2,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,3)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"),
+   #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = negativo disper esg comb"
+)
+rotulos2
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = negativo, VD = disper, VI = esg_comb
+
+```{r}
+funcao_hausman(resposta2[[2]],resposta2[[3]])
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+funcao_autocorrelacao(resposta2[[2]],resposta2[[3]])
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta2[[2]],test = 'cd')
+```
+
+## Aplicando a modelagem dinâmica para painéis pequenos com poucos grupos (N < T) com a correção de variância-covariância Driscoll-Kraay (1998)
+
+```{r}
+resposta2_within <- plm(
+  disper ~ lag_disper + esg_comb + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[2]]$ticket),
+    lag_disper = lag(disper),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "within", effect = "twoways"
+)
+
+resposta2_random <- plm(
+  disper ~ lag_disper + esg_comb + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[2]]$ticket),
+    lag_disper = lag(disper),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "random", effect = "twoways"
+)
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios
+
+```{r}
+funcao_hausman(resposta2_within,resposta2_random)
+```
+
+# Sumário do modelo escolhido pelo teste de Hausman
+
+```{r}
+summary(resposta2_within, vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"))
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+pbgtest(resposta2_within)
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta2_within)
+```
+
+## Aplicando o modelo GMM disper, sem lag(esg_comb)
+
+```{r}
+resposta2_GMM_a <- pgmm(
+ formula = disper ~ lag(disper) + esg_comb + qanalyst | lag(disper, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[2]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta2_GMM_a, robust = T)
+```
+
+## Aplicando o modelo GMM disper, com lag(esg_comb)
+
+```{r}
+resposta2_GMM_b <- pgmm(
+ formula = disper ~ lag(disper) + lag(esg_comb) + esg_comb + qanalyst |
+   lag(disper, 2:99) + lag(esg_comb, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[2]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta2_GMM_b, robust = T)
+```
+
+## Gráfico para Sinal = negativo, VD = disper, VI = esg_score
+
+```{r warning=FALSE}
+#valor_lista <- 3 # Variável para mudar a lista de dados a ser visualizada
+# G3 <- funcao_grafico(valor_lista,"right","ESG Score",
+#     "Dispersion of analysts' forecasts")
+# G3
+```
+
+## Modelos para Sinal = negativo, VD = disper, VI = esg_score
+
+```{r warning=FALSE}
+valor_lista <- 3 # Variável para mudar a lista de dados a ser visualizada
+resposta3 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos3 <- paste0("M",1:length(resposta3)," - ",names(resposta3))
+names(resposta3) <- paste0("M",1:length(resposta3))
+
+# stargazer(resposta3,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta3,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,3)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"),
+   #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = negativo disper esg score"
+)
+rotulos3
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = negativo, VD = disper, VI = esg_score
+
+```{r}
+funcao_hausman(resposta3[[2]],resposta3[[3]])
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+funcao_autocorrelacao(resposta3[[2]],resposta3[[3]])
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta3[[2]],test = 'cd')
+```
+
+## Aplicando a modelagem dinâmica para painéis pequenos com poucos grupos (N < T) com a correção de variância-covariância Driscoll-Kraay (1998)
+
+```{r}
+resposta3_within <- plm(
+  disper ~ lag_disper + esg_score + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[3]]$ticket),
+    lag_disper = lag(disper),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "within", effect = "twoways"
+)
+
+resposta3_random <- plm(
+  disper ~ lag_disper + esg_score + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[3]]$ticket),
+    lag_disper = lag(disper),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "random", effect = "twoways"
+)
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios
+
+```{r}
+funcao_hausman(resposta3_within,resposta3_random)
+```
+
+# Sumário do modelo escolhido pelo teste de Hausman
+
+```{r}
+summary(resposta3_within,vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"))
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+pbgtest(resposta3_within)
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta3_within)
+```
+
+## Aplicando o modelo GMM disper, sem lag(esg_score)
+
+```{r}
+resposta3_GMM_a <- pgmm(
+ formula = disper ~ lag(disper) + esg_score + qanalyst | lag(disper, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[3]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta3_GMM_a,robust = T)
+```
+
+## Aplicando o modelo GMM disper, com lag(esg_score)
+
+```{r}
+resposta3_GMM_b <- pgmm(
+ formula = disper ~ lag(disper) + lag(esg_score) + esg_score + qanalyst |
+  lag(disper, 2:99) + lag(esg_score, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[3]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta3_GMM_b)
+```
+
+## Gráfico para Sinal = negativo, VD = disper, VI = gov_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 4 # Variável para mudar a lista de dados a ser visualizada
+# G4 <- funcao_grafico(valor_lista,"right","Governance Pillar Score",
+#     "Dispersion of analysts' forecasts")
+# G4
+```
+
+## Modelos para Sinal = negativo, VD = disper, VI = gov_pillar
+
+```{r warning=FALSE}
+valor_lista <- 4 # Variável para mudar a lista de dados a ser visualizada
+resposta4 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos4 <- paste0("M",1:length(resposta4)," - ",names(resposta4))
+names(resposta4) <- paste0("M",1:length(resposta4))
+
+# stargazer(resposta4,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta4,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,3)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"),
+   #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = negativo disper gov pillar"
+)
+rotulos4
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = negativo, VD = disper, VI = gov_pillar
+
+```{r}
+funcao_hausman(resposta4[[2]],resposta4[[3]])
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+funcao_autocorrelacao(resposta4[[2]],resposta4[[3]])
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta4[[2]],test = 'cd')
+```
+
+## Aplicando a modelagem dinâmica para painéis pequenos com poucos grupos (N < T) com a correção de variância-covariância Driscoll-Kraay (1998)
+
+```{r}
+resposta4_within <- plm(
+  disper ~ lag_disper + gov_pillar + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[4]]$ticket),
+    lag_disper = lag(disper),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "within", effect = "twoways"
+)
+
+resposta4_random <- plm(
+  disper ~ lag_disper + gov_pillar + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[4]]$ticket),
+    lag_disper = lag(disper),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "random", effect = "twoways"
+)
+```
+
+# Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios
+
+```{r}
+funcao_hausman(resposta4_within,resposta4_random)
+```
+
+# Sumário do modelo escolhido pelo teste de Hausman
+
+```{r}
+summary(resposta4_within,vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"))
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+pbgtest(resposta4_within)
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta4_within)
+```
+
+## Aplicando o modelo GMM disper, sem lag(gov_pillar)
+
+```{r}
+resposta4_GMM_a <- pgmm(
+ formula = disper ~ lag(disper) + gov_pillar + qanalyst | lag(disper, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[4]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta4_GMM_a)
+```
+
+## Aplicando o modelo GMM disper, com lag(gov_pillar)
+
+```{r}
+resposta4_GMM_b <- pgmm(
+ formula = disper ~ lag(disper) + lag(gov_pillar) + gov_pillar + qanalyst |
+   lag(disper, 2:99) + lag(gov_pillar, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[4]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta4_GMM_b)
+```
+
+## Gráfico para Sinal = negativo, VD = disper, VI = social_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 5# Variável para mudar a lista de dados a ser visualizada
+# G5 <- funcao_grafico(valor_lista,"right","Social Pillar Score","Dispersion of analysts' forecasts")
+# G5
+```
+
+## Modelos para Sinal = negativo, VD = disper, VI = social_pillar
+
+```{r warning=FALSE}
+valor_lista <- 5# Variável para mudar a lista de dados a ser visualizada
+resposta5 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos5 <- paste0("M",1:length(resposta5)," - ",names(resposta5))
+names(resposta5) <- paste0("M",1:length(resposta5))
+
+# stargazer(resposta5,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta5,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,3)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"),
+   #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = negativo disper social pillar"
+)
+rotulos5
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = negativo, VD = disper, VI = social_pillar
+
+```{r}
+funcao_hausman(resposta5[[2]],resposta5[[3]])
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+funcao_autocorrelacao(resposta5[[2]],resposta5[[3]])
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta5[[2]],test = 'cd')
+```
+
+## Aplicando a modelagem dinâmica para painéis pequenos com poucos grupos (N < T) com a correção de variância-covariância Driscoll-Kraay (1998)
+
+```{r}
+resposta5_within <- plm(
+  disper ~ lag_disper + social_pillar + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[5]]$ticket),
+    lag_disper = lag(disper),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "within", effect = "twoways"
+)
+
+resposta5_random <- plm(
+  disper ~ lag_disper + social_pillar + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[5]]$ticket),
+    lag_disper = lag(disper),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "random", effect = "twoways"
+)
+```
+
+# Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios
+
+```{r}
+funcao_hausman(resposta5_within,resposta5_random)
+```
+
+# Sumário do modelo escolhido pelo teste de Hausman
+
+```{r}
+summary(resposta5_within,vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"))
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+pbgtest(resposta5_within)
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta5_within)
+```
+
+## Aplicando o modelo GMM disper, sem lag(social_pillar)
+
+```{r}
+resposta5_GMM_a <- pgmm(
+ formula = disper ~ lag(disper) + social_pillar + qanalyst | lag(disper, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[5]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta5_GMM_a)
+```
+
+## Aplicando o modelo GMM disper, com lag(social_pillar)
+
+```{r}
+resposta5_GMM_b <- pgmm(
+ formula = disper ~ lag(disper) +  lag(social_pillar) + social_pillar + qanalyst |
+  lag(disper, 2:99) + lag(social_pillar, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[5]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta5_GMM_b)
+```
+
+## Gráfico para Sinal = negativo, VD = mape, VI = env_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 6 # Variável para mudar a lista de dados a ser visualizada
+# G6 <- funcao_grafico(valor_lista,"right","Environmental Pillar Score","Mean Absolute Prediction Error")
+# G6
+```
+
+## Modelos para Sinal = negativo, VD = mape, VI = env_pillar
+
+```{r warning=FALSE}
+valor_lista <- 6 # Variável para mudar a lista de dados a ser visualizada
+resposta6 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos6 <- paste0("M",1:length(resposta6)," - ",names(resposta6))
+names(resposta6) <- paste0("M",1:length(resposta6))
+
+# stargazer(resposta6,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta6,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,6)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"),
+   #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = negativo mape env pillar"
+)
+rotulos6
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = negativo, VD = mape, VI = env_pillar
+
+```{r}
+funcao_hausman(resposta6[[2]],resposta6[[3]])
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+funcao_autocorrelacao(resposta6[[2]],resposta6[[3]])
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta6[[3]],test = 'cd')
+```
+
+## Aplicando a modelagem dinâmica para painéis pequenos com poucos grupos (N < T) com a correção de variância-covariância Driscoll-Kraay (1998)
+
+```{r}
+resposta6_within <- plm(
+  mape ~ lag_mape + env_pillar + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[6]]$ticket),
+    lag_mape = lag(mape),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "within", effect = "twoways"
+)
+
+resposta6_random <- plm(
+  mape ~ lag_mape + env_pillar + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[6]]$ticket),
+    lag_mape = lag(mape),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "random", effect = "twoways"
+)
+```
+
+# Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios
+
+```{r}
+funcao_hausman(resposta6_within,resposta6_random)
+```
+
+# Sumário do modelo escolhido pelo teste de Hausman
+
+```{r}
+summary(resposta6_within,vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"))
+# Aqui foi escolhido o de efeitos fixos porque o coeficiente theta foi igual a zero.
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+pbgtest(resposta6_within)
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta6_within)
+```
+
+## Aplicando o modelo GMM mape, sem lag(env_pillar)
+
+```{r}
+resposta6_GMM_a <- pgmm(
+ formula = mape ~ lag(mape) + env_pillar + qanalyst | lag(mape, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[6]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta6_GMM_a)
+```
+
+## Aplicando o modelo GMM mape, com lag(env_pillar)
+
+```{r}
+resposta6_GMM_b <- pgmm(
+ formula = mape ~ lag(mape) + lag(env_pillar) + env_pillar + qanalyst |
+  lag(mape, 2:99) + lag(env_pillar, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[6]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta6_GMM_b)
+```
+
+## Gráfico para Sinal = negativo, VD = mape, VI = esg_comb
+
+```{r warning=FALSE}
+# valor_lista <- 7 # Variável para mudar a lista de dados a ser visualizada
+# G7 <- funcao_grafico(valor_lista,"right","ESG Combined Score","Mean Absolute Prediction Error")
+# G7
+```
+
+## Modelos para Sinal = negativo, VD = mape, VI = esg_comb
+
+```{r warning=FALSE}
+valor_lista <- 7 # Variável para mudar a lista de dados a ser visualizada
+resposta7 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos7 <- paste0("M",1:length(resposta7)," - ",names(resposta7))
+names(resposta7) <- paste0("M",1:length(resposta7))
+
+# stargazer(resposta7,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta7,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,6)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"),
+   #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = negativo mape esg comb"
+)
+rotulos7
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = negativo, VD = mape, VI = esg_comb
+
+```{r}
+funcao_hausman(resposta7[[2]],resposta7[[3]])
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+funcao_autocorrelacao(resposta7[[2]],resposta7[[3]])
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta7[[3]],test = 'cd')
+```
+
+## Aplicando a modelagem dinâmica para painéis pequenos com poucos grupos (N < T) com a correção de variância-covariância Driscoll-Kraay (1998)
+
+```{r}
+resposta7_within <- plm(
+  mape ~ lag_mape + esg_comb + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[7]]$ticket),
+    lag_mape = lag(mape),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "within", effect = "twoways"
+)
+
+resposta7_random <- plm(
+  mape ~ lag_mape + esg_comb + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[7]]$ticket),
+    lag_mape = lag(mape),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "random", effect = "twoways"
+)
+```
+
+# Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios
+
+```{r}
+funcao_hausman(resposta7_within,resposta7_random)
+```
+
+# Sumário do modelo escolhido pelo teste de Hausman
+
+```{r}
+summary(resposta7_random,vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"))
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+pbgtest(resposta7_random)
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta7_random)
+```
+
+## Aplicando o modelo GMM mape, sem lag(esg_comb)
+
+```{r}
+resposta7_GMM_a <- pgmm(
+ formula = mape ~ lag(mape) + esg_comb + qanalyst | lag(mape, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[7]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta7_GMM_a)
+```
+
+## Aplicando o modelo GMM mape com lag(esg_comb) 
+
+```{r}
+resposta7_GMM_b <- pgmm(
+ formula = mape ~ lag(mape) + lag(esg_comb) + esg_comb + qanalyst | 
+  lag(mape, 2:99) + lag(esg_comb, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[7]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta7_GMM_b)
+```
+
+## Gráfico para Sinal = negativo, VD = mape, VI = esg_score
+
+```{r warning=FALSE}
+# valor_lista <- 8 # Variável para mudar a lista de dados a ser visualizada
+# G8 <- funcao_grafico(valor_lista,"right","ESG Score","Mean Absolute Prediction Error")
+# G8
+```
+
+## Modelos para Sinal = negativo, VD = mape, VI = esg_score
+
+```{r warning=FALSE}
+valor_lista <- 8 # Variável para mudar a lista de dados a ser visualizada
+resposta8 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos8 <- paste0("M",1:length(resposta8)," - ",names(resposta8))
+names(resposta8) <- paste0("M",1:length(resposta8))
+
+# stargazer(resposta8,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta8,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,6)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"),
+   #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = negativo mape esg score"
+)
+rotulos8
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = negativo, VD = mape, VI = esg_score
+
+```{r}
+funcao_hausman(resposta8[[2]],resposta8[[3]])
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+funcao_autocorrelacao(resposta8[[2]],resposta8[[3]])
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta8[[2]],test = 'cd')
+```
+
+## Aplicando a modelagem dinâmica para painéis pequenos com poucos grupos (N < T) com a correção de variância-covariância Driscoll-Kraay (1998)
+
+```{r}
+resposta8_within <- plm(
+  mape ~ lag_mape + esg_score + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[8]]$ticket),
+    lag_mape = lag(mape),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "within", effect = "twoways"
+)
+
+resposta8_random <- plm(
+  mape ~ lag_mape + esg_score + qanalyst,
+  data = drop_na(
+   mutate(
+    filter(bd,ticket %in% lista_corr_signal[[8]]$ticket),
+    lag_mape = lag(mape),.by = "ticket",.after = "disper"
+   )
+  ),
+  model = "random", effect = "twoways"
+)
+```
+
+# Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios
+
+```{r}
+funcao_hausman(resposta8_within,resposta8_random)
+```
+
+# Sumário do modelo escolhido pelo teste de Hausman
+
+```{r}
+summary(resposta8_within,vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"))
+```
+
+## Aplicando o teste Breusch-Godfrey/Wooldridge para correlação serial em dados em painel
+
+```{r}
+pbgtest(resposta8_within)
+```
+
+## Aplicando o teste de dependência transversal Pesaran's CD
+
+```{r}
+pcdtest(resposta8_within)
+```
+
+## Aplicando o modelo GMM mape sem lag(esg_score)
+
+```{r}
+resposta8_GMM_a <- pgmm(
+ formula = mape ~ lag(mape) + esg_score + qanalyst | lag(mape, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[8]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta8_GMM_a)
+```
+
+## Aplicando o modelo GMM mape com lag(esg_score)
+
+```{r}
+resposta8_GMM_b <- pgmm(
+ formula = mape ~ lag(mape) + lag(esg_score) + esg_score + qanalyst | 
+  lag(mape, 2:99) + lag(esg_score, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[8]]$ticket),
+ index = c('ticket', 'year'),
+ model="onestep", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta8_GMM_b)
+```
+
+## Gráfico para Sinal = negative, VD = mape, VI = gov_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 9 # Variável para mudar a lista de dados a ser visualizada
+# G9 <- funcao_grafico(valor_lista,"right","Governance Pillar Score","Mean Absolute Prediction Error")
+# G9
+```
+
+## Modelos para Sinal = negativo, VD = mape, VI = gov_pillar
+
+```{r warning=FALSE}
+valor_lista <- 9 # Variável para mudar a lista de dados a ser visualizada
+resposta9 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos9 <- paste0("M",1:length(resposta9)," - ",names(resposta9))
+names(resposta9) <- paste0("M",1:length(resposta9))
+
+# stargazer(resposta9,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta9,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,6)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = \(x) vcovSCC(x,type = "HC1",inner = "cluster"),
+   #function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = negativo mape gov pillar"
+)
+rotulos9
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = negative, VD = mape, VI = gov_pillar
+
+```{r}
+funcao_hausman(resposta9[[2]],resposta9[[3]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta9[[2]],resposta9[[3]])
+```
+
+## Aplicando o modelo GMM mape sem lag(gov_pillar)
+
+```{r}
+resposta9_GMM_a <- pgmm(
+ formula = mape ~ lag(mape) + gov_pillar + qanalyst | lag(mape, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[9]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta9_GMM_a)
+```
+
+## Aplicando o modelo GMM mape com lag(gov_pillar)
+
+```{r}
+resposta9_GMM_b <- pgmm(
+ formula = mape ~ lag(mape) + lag(gov_pillar) + gov_pillar + qanalyst | 
+  lag(mape, 2:99) + lag(gov_pillar, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[9]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta9_GMM_b)
+```
+
+## Gráfico para Sinal = negativo, VD = mape, VI = social_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 10 # Variável para mudar a lista de dados a ser visualizada
+# G10 <- funcao_grafico(valor_lista,"right","Social Pillar Score","Mean Absolute Prediction Error")
+# G10
+```
+
+## Modelos para Sinal = negativo, VD = mape, VI = social_pillar
+
+```{r warning=FALSE}
+valor_lista <- 10 # Variável para mudar a lista de dados a ser visualizada
+resposta10 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos10 <- paste0("M",1:length(resposta10)," - ",names(resposta10))
+names(resposta10) <- paste0("M",1:length(resposta10))
+
+# stargazer(resposta10,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta10,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,6)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = negativo mape social pillar"
+)
+rotulos10
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = negative, VD = mape, VI = social_pillar
+
+```{r}
+funcao_hausman(resposta10[[2]],resposta10[[3]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta10[[2]],resposta10[[3]])
+```
+
+## Aplicando o modelo GMM mape sem lag(social_pillar)
+
+```{r}
+resposta10_GMM_a <- pgmm(
+ formula = mape ~ lag(mape) + social_pillar + qanalyst | lag(mape, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[10]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta10_GMM_a)
+```
+
+## Aplicando o modelo GMM mape com lag(social_pillar)
+
+```{r}
+resposta10_GMM_b <- pgmm(
+ formula = mape ~ lag(mape) + lag(social_pillar) + social_pillar + qanalyst | 
+  lag(mape, 2:99) + lag(social_pillar, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[10]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta10_GMM_b)
+```
+
+## Gráfico para Sinal = positivo, VD = disper, VI = env_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 11 # Variável para mudar a lista de dados a ser visualizada
+# G11 <- funcao_grafico(valor_lista,"right","Environmental Pillar Score","Dispersion of analysts' forecasts")
+# G11
+```
+
+## Modelos para Sinal = positivo, VD = disper, VI = env_pillar
+
+```{r warning=FALSE}
+valor_lista <- 11 # Variável para mudar a lista de dados a ser visualizada
+resposta11 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos11 <- paste0("M",1:length(resposta11)," - ",names(resposta11))
+names(resposta11) <- paste0("M",1:length(resposta11))
+
+# stargazer(resposta11,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta11,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{format(round(estimate,3),nsmall=3)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = positivo disper env pillar"
+)
+rotulos11
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = positivo, VD = disper, VI = env_pillar
+
+```{r}
+funcao_hausman(resposta11[[2]],resposta11[[3]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta11[[2]],resposta11[[3]])
+```
+
+## Aplicando o modelo GMM disper sem lag(env_pillar)
+
+```{r}
+resposta11_GMM_a <- pgmm(
+ formula = disper ~ lag(disper) + env_pillar + qanalyst | lag(disper, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[11]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta11_GMM_a)
+```
+
+## Aplicando o modelo GMM disper com lag(env_pillar)
+
+```{r}
+resposta11_GMM_b <- pgmm(
+ formula = disper ~ lag(disper) + lag(env_pillar) + env_pillar + qanalyst | 
+  lag(disper, 2:99) + lag(env_pillar, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[11]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta11_GMM_b)
+```
+
+## Gráfico para Sinal = positivo, VD = disper, VI = esg_comb
+
+```{r warning=FALSE}
+# valor_lista <- 12 # Variável para mudar a lista de dados a ser visualizada
+# G12 <- funcao_grafico(valor_lista,"right","ESG Combined Score","Dispersion of analysts' forecasts")
+# G12
+```
+
+## Modelos para Sinal = positivo, VD = disper, VI = esg_comb
+
+```{r warning=FALSE}
+valor_lista <- 12 # Variável para mudar a lista de dados a ser visualizada
+resposta12 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos12 <- paste0("M",1:length(resposta12)," - ",names(resposta12))
+names(resposta12) <- paste0("M",1:length(resposta12))
+
+# stargazer(resposta12,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta12,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{format(round(estimate,3),nsmall=3)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = positivo disper esg comb"
+)
+rotulos12
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (. ). Modelos para Sinal = positivo, VD = disper, VI = esg_comb
+
+```{r}
+funcao_hausman(resposta12[[2]],resposta12[[3]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta12[[2]],resposta12[[3]])
+```
+
+## Aplicando o modelo GMM disper sem lag(esg_comb)
+
+```{r}
+resposta12_GMM_a <- pgmm(
+ formula = disper ~ lag(disper) + esg_comb + qanalyst | lag(disper, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[12]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta12_GMM_a)
+```
+
+## Aplicando o modelo GMM disper com lag(esg_comb)
+
+```{r}
+resposta12_GMM_b <- pgmm(
+ formula = disper ~ lag(disper) + lag(esg_comb) + esg_comb + qanalyst | 
+  lag(disper, 2:99) + lag(esg_comb, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[12]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta12_GMM_b)
+```
+
+## Gráfico para Sinal = positivo, VD = disper, VI = esg_score
+
+```{r warning=FALSE}
+# valor_lista <- 13 # Variável para mudar a lista de dados a ser visualizada
+# G13 <- funcao_grafico(valor_lista,"right","ESG Score","Dispersion of analysts' forecasts")
+# G13
+```
+
+## Modelos para Sinal = positivo, VD = disper, VI = esg_score
+
+```{r warning=FALSE}
+valor_lista <- 13 # Variável para mudar a lista de dados a ser visualizada
+resposta13 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos13 <- paste0("M",1:length(resposta13)," - ",names(resposta13))
+names(resposta13) <- paste0("M",1:length(resposta13))
+
+# stargazer(resposta13,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta13,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{format(round(estimate,3),nsmall=3)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = positivo disper esg score"
+)
+rotulos13
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = positivo, VD = disper, VI = esg_score
+
+```{r}
+funcao_hausman(resposta13[[2]],resposta13[[3]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta13[[2]],resposta13[[3]])
+```
+
+## Aplicando o modelo GMM disper sem lag(esg_score)
+
+```{r}
+resposta13_GMM_a <- pgmm(
+ formula = disper ~ lag(disper) + esg_score + qanalyst | lag(disper, 2:2),
+ data = filter(bd,ticket %in% lista_corr_signal[[13]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = F, transformation = "ld"
+)
+summary(resposta13_GMM_a)
+```
+
+## Gráfico para Sinal = positivo, VD = disper, VI = gov_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 14 # Variável para mudar a lista de dados a ser visualizada
+# G14 <- funcao_grafico(valor_lista,"right","Governance Pillar Score","Dispersion of analysts' forecasts")
+# G14
+```
+
+## Modelos para Sinal = positivo, VD = disper, VI = gov_pillar
+
+```{r warning=FALSE}
+valor_lista <- 14 # Variável para mudar a lista de dados a ser visualizada
+resposta14 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos14 <- paste0("M",1:length(resposta14)," - ",names(resposta14))
+names(resposta14) <- paste0("M",1:length(resposta14))
+
+# stargazer(resposta14,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta14,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{format(round(estimate,3),nsmall=3)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = positivo disper gov pillar"
+)
+rotulos14
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (). Modelos para Sinal = positivo, VD = disper, VI = gov_pillar
+
+```{r}
+funcao_hausman(resposta14[[2]],resposta14[[4]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta14[[2]],resposta14[[3]])
+```
+
+## Aplicando o modelo GMM
+
+```{r}
+resposta14_GMM <- pgmm(
+ formula = disper ~ lag(disper) + gov_pillar + qanalyst | lag(disper, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[14]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta14_GMM)
+```
+
+# Neste caso, foram feitos testes adicionais para verificar se um modelo pooling é preferível a um modelo de efeitos aleatórios
+
+```{r}
+# Aplicação do Teste de Breusch-Pagan (LM)
+# Este teste confirma se a variância dos efeitos individuais é zero
+plmtest(resposta14[[1]], type = "bp")
+```
+
+```{r}
+# Teste de Wooldridge para efeitos não observados
+pwtest(resposta14[[1]])
+```
+
+```{r}
+# Aplicação do Teste F (Comparando Within vs Pooling)
+# Primeiro estimamos o modelo de Efeitos Fixos (Within)
+pFtest(resposta14[[2]], resposta14[[1]])
+```
+
+## Gráfico para Sinal = positivo, VD = disper, VI = social_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 15 # Variável para mudar a lista de dados a ser visualizada
+# G15 <- funcao_grafico(valor_lista,"right","Social Pillar Score","Dispersion of analysts' forecasts")
+# G15
+```
+
+## Modelos para Sinal = positivo, VD = disper, VI = social_pillar
+
+```{r warning=FALSE}
+valor_lista <- 15 # Variável para mudar a lista de dados a ser visualizada
+resposta15 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos15 <- paste0("M",1:length(resposta15)," - ",names(resposta15))
+names(resposta15) <- paste0("M",1:length(resposta15))
+
+# stargazer(resposta15,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta15,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{format(round(estimate,3),nsmall=3)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = positivo disper social pillar"
+)
+rotulos15
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (. ). Modelos para Sinal = positivo, VD = disper, VI = social_pillar
+
+```{r}
+funcao_hausman(resposta15[[2]],resposta15[[3]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta15[[2]],resposta15[[3]])
+```
+
+## Aplicando o modelo GMM
+
+```{r}
+resposta15_GMM <- pgmm(
+ formula = disper ~ lag(disper) + social_pillar + qanalyst | lag(disper, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[15]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta15_GMM)
+```
+
+## Gráfico para Sinal = positivo, VD = mape, VI = env_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 16 # Variável para mudar a lista de dados a ser visualizada
+# G16 <- funcao_grafico(valor_lista,"left","Environmental Pillar Score","Mean Absolute Prediction Error")
+# G16
+```
+
+## Modelos para Sinal = positivo, VD = mape, VI = env_pillar
+
+```{r warning=FALSE}
+valor_lista <- 16 # Variável para mudar a lista de dados a ser visualizada
+resposta16 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos16 <- paste0("M",1:length(resposta16)," - ",names(resposta16))
+names(resposta16) <- paste0("M",1:length(resposta16))
+
+# stargazer(resposta16,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta16,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,6)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = positivo mape env pillar"
+)
+rotulos16
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (.). Modelos para Sinal = positivo, VD = mape, VI = env_pillar
+
+```{r}
+funcao_hausman(resposta16[[2]],resposta16[[3]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta16[[2]],resposta16[[3]])
+```
+
+## Aplicando o modelo GMM
+
+```{r}
+resposta16_GMM <- pgmm(
+ formula = mape ~ lag(mape) + env_pillar + qanalyst | lag(mape, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[16]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta16_GMM)
+```
+
+## Gráfico para Sinal = positivo, VD = mape, VI = esg_comb
+
+```{r warning=FALSE}
+# valor_lista <- 17# Variável para mudar a lista de dados a ser visualizada
+# G17 <- funcao_grafico(valor_lista,"left","ESG Combined Score","Mean Absolute Prediction Error")
+# G17
+```
+
+## Modelos para Sinal = positivo, VD = mape, VI = esg_comb
+
+```{r warning=FALSE}
+valor_lista <- 17# Variável para mudar a lista de dados a ser visualizada
+resposta17 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos17 <- paste0("M",1:length(resposta17)," - ",names(resposta17))
+names(resposta17) <- paste0("M",1:length(resposta17))
+
+# stargazer(resposta17,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta17,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,6)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = positivo mape esg combine"
+)
+rotulos17
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (.). Modelos para Sinal = positivo, VD = mape, VI = esg_comb
+
+```{r}
+funcao_hausman(resposta17[[2]],resposta17[[3]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta17[[2]],resposta17[[3]])
+```
+
+## Aplicando o modelo GMM
+
+```{r}
+resposta17_GMM <- pgmm(
+ formula = mape ~ lag(mape) + esg_comb + qanalyst | lag(mape, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[17]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta17_GMM)
+```
+
+## Gráfico para Sinal = positivo, VD = mape, VI = esg_score
+
+```{r warning=FALSE}
+# valor_lista <- 18# Variável para mudar a lista de dados a ser visualizada
+# G18 <- funcao_grafico(valor_lista,"left","ESG Score","Mean Absolute Prediction Error")
+# G18
+```
+
+## Modelos para Sinal = positive, VD = mape, VI = esg_score
+
+```{r warning=FALSE}
+valor_lista <- 18# Variável para mudar a lista de dados a ser visualizada
+resposta18 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos18 <- paste0("M",1:length(resposta18)," - ",names(resposta18))
+names(resposta18) <- paste0("M",1:length(resposta18))
+
+# stargazer(resposta18,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta18,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,6)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = positivo mape env score"
+)
+rotulos18
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (.). Modelos para Sinal = positivo, VD = mape, VI = esg_score
+
+```{r}
+funcao_hausman(resposta18[[2]],resposta18[[3]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta18[[2]],resposta18[[3]])
+```
+
+## Aplicando o modelo GMM
+
+```{r}
+resposta18_GMM <- pgmm(
+ formula = mape ~ lag(mape) + esg_score + qanalyst | lag(mape, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[18]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta18_GMM)
+```
+
+## Gráfico para Sinal = positivo, VD = mape, VI = gov_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 19# Variável para mudar a lista de dados a ser visualizada
+# G19 <- funcao_grafico(valor_lista,"left","Governance Pillar Score","Mean Absolute Prediction Error")
+# G19
+```
+
+## Modelos para Sinal = positivo, VD = mape, VI = gov_pillar
+
+```{r warning=FALSE}
+valor_lista <- 19# Variável para mudar a lista de dados a ser visualizada
+resposta19 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos19 <- paste0("M",1:length(resposta19)," - ",names(resposta19))
+names(resposta19) <- paste0("M",1:length(resposta19))
+
+# stargazer(resposta19[-3],type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta19,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,6)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = positivo mape gov pillar"
+)
+rotulos19
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (.). Modelos para Sinal = positivo, VD = mape, VI = gov_pillar
+
+```{r}
+funcao_hausman(resposta19[[2]],resposta19[[4]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta19[[2]],resposta19[[4]])
+```
+
+## Aplicando o modelo GMM
+
+```{r}
+resposta19_GMM <- pgmm(
+ formula = mape ~ lag(mape) + lag(gov_pillar) + gov_pillar + qanalyst | 
+   lag(mape, 2:99) + lag(gov_pillar, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[19]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "d"
+)
+summary(resposta19_GMM)
+```
+
+## Gráfico para Sinal = positivo, VD = mape, VI = social_pillar
+
+```{r warning=FALSE}
+# valor_lista <- 20# Variável para mudar a lista de dados a ser visualizada
+# G20 <- funcao_grafico(valor_lista,"left","Social Pillar Score","Mean Absolute Prediction Error")
+# G20
+```
+
+## Modelos para Sinal = positivo, VD = mape, VI = social_pillar
+
+```{r warning=FALSE}
+valor_lista <- 20# Variável para mudar a lista de dados a ser visualizada
+resposta20 <- Filter(is.list,lista_modelos[str_detect(names(lista_modelos),
+ names(lista_equacoes)[valor_lista])])
+rotulos20 <- paste0("M",1:length(resposta20)," - ",names(resposta20))
+names(resposta20) <- paste0("M",1:length(resposta20))
+
+# stargazer(resposta20,type="text",
+#  dep.var.labels = stringr::str_replace_all(nomes[valor_lista],"_"," "))
+
+modelsummary(
+ resposta20,
+ fmt = NULL,
+ output = "markdown",
+ estimate = "{round(estimate,6)}{stars}",
+ statistic = "p = {round(p.value,3)}",
+ stars = TRUE,
+ notes =  paste0("+ = .1; ", "* = .05; ", "** = .01; ", "*** = 0.001"),
+ vcov = function(x) vcovHC(x,method="arellano",type="HC1",cluster="group"),
+ title = "Dependent variable = positivo mape social pillar"
+)
+rotulos20
+```
+
+## Aplicando o teste de Hausman entre o modelo de efeitos fixos vs. efeitos aleatórios (.). Modelos para Sinal = positivo, VD = mape, VI = social_pillar
+
+```{r}
+funcao_hausman(resposta20[[2]],resposta20[[3]])
+```
+
+## Aplicando o teste de Wooldridge para autocorrelação em efeitos fixos OU o teste de dependência serial de Baltagi e Li para modelos de efeitos aleatórios
+
+```{r}
+funcao_autocorrelacao(resposta20[[2]],resposta20[[3]])
+```
+
+## Aplicando o modelo GMM
+
+```{r}
+resposta20_GMM <- pgmm(
+ formula = mape ~ lag(mape) + social_pillar + qanalyst | lag(mape, 2:99),
+ data = filter(bd,ticket %in% lista_corr_signal[[20]]$ticket),
+ index = c('ticket', 'year'),
+ model="twosteps", effect="twoways", collapse = T, transformation = "ld"
+)
+summary(resposta20_GMM)
+```
+
+## Empresas com relação negativa e positiva entre VD e VI.
+
+```{r}
+# ticket_negativas <- map_dfr(1:10, \(i) {
+# data.frame(empresa = lista_corr_signal[[i]]$ticket)
+# }) |> pull(empresa) |> unique()
+# empresas_negativas <- tbl_companies |> filter(ticket %in% ticket_negativas) |>
+# mutate(relation = "negative")
+# 
+# ticket_positivas <- map_dfr(11:20, \(i) {
+# data.frame(empresa = lista_corr_signal[[i]]$ticket)
+# }) |> pull(empresa) |> unique()
+# empresas_positivas <- tbl_companies |> filter(ticket %in% ticket_positivas) |>
+# mutate(relation = "positive")
+# 
+# tbl_companies_new <- bind_rows(empresas_negativas,empresas_positivas) |>
+# arrange(relation,country)
+```
+
+# Empresas que apresentaram situações de correlação tanto positivas quanto negativas
+
+```{r}
+# inner_join(empresas_positivas,empresas_negativas,by=join_by(ticket)) |>
+# select(1:5,9,17)
+```
+
+# Estatística descritiva das empresas negativas
+
+```{r}
+# Por continente
+# empresas_negativas |> count(continent) |> arrange(desc(n)) |>
+# mutate(
+#  freq_rel = round(100 * n / sum(n),2),
+#  freq_acum = round(cumsum(freq_rel),2)
+# )|> knitr::kable(
+#  format = formato_tbl,
+#  digits = 1,
+#  table.attr = "style='color: white;'",
+#  align = "rrrr"
+# )
+```
+
+```{r}
+# Por país
+# empresas_negativas |> count(country) |> arrange(desc(n)) |>
+# mutate(
+#  freq_rel = round(100 * n / sum(n),2),
+#  freq_acum = round(cumsum(freq_rel),2)
+# )|> knitr::kable(
+#  format = formato_tbl,
+#  digits = 1,
+#  table.attr = "style='color: white;'",
+#  align = "rrrr"
+# )
+```
+
+```{r}
+# Por setor GICS
+# empresas_negativas |> count(sector_gics) |> arrange(desc(n)) |>
+# mutate(
+#  freq_rel = round(100 * n / sum(n),2),
+#  freq_acum = round(cumsum(freq_rel),2)
+# )|> knitr::kable(
+#  format = formato_tbl,
+#  digits = 1,
+#  table.attr = "style='color: white;'",
+#  align = "rrrr"
+# )
+```
+
+# Estatística descritiva das empresas positivas
+
+```{r}
+# Por continente
+# empresas_positivas |> count(continent) |> arrange(desc(n)) |>
+# mutate(
+#  freq_rel = round(100 * n / sum(n),2),
+#  freq_acum = round(cumsum(freq_rel),2)
+# )|> knitr::kable(
+#  format = formato_tbl,
+#  digits = 1,
+#  table.attr = "style='color: white;'",
+#  align = "rrrr"
+# )
+```
+
+```{r}
+# Por país
+# empresas_positivas |> count(country) |> arrange(desc(n)) |>
+# mutate(
+#  freq_rel = round(100 * n / sum(n),2),
+#  freq_acum = round(cumsum(freq_rel),2)
+# )|> knitr::kable(
+#  format = formato_tbl,
+#  digits = 1,
+#  table.attr = "style='color: white;'",
+#  align = "rrrr"
+# )
+```
+
+```{r}
+# Por setor GICS
+# empresas_positivas |> count(sector_gics) |> arrange(desc(n)) |>
+# mutate(
+#  freq_rel = round(100 * n / sum(n),2),
+#  freq_acum = round(cumsum(freq_rel),2)
+# )|> knitr::kable(
+#  format = formato_tbl,
+#  digits = 1,
+#  table.attr = "style='color: white;'",
+#  align = "rrrr"
+# )
+```
+
+# Clusterização das empresas com correlações negativas
+
+```{r}
+# negativas_codificadas <- read.delim(
+#  file = "/home/abdinardo/Dropbox/00 Artigo_Israel_Panel_Data/negativas_codificadas.csv",
+#  sep = ";"
+# ) |> clean_names()
+# 
+# positivas_codificadas <- read.delim(
+#  file = "/home/abdinardo/Dropbox/00 Artigo_Israel_Panel_Data/positivas_codificadas.csv",
+#  sep = ";"
+# ) |> clean_names()
+
+```
+
+```{r}
+# n_inicial <- 123
+# umap_nc <- uwot::umap(select(negativas_codificadas,where(is.integer)), n_neighbors = 10, min_dist = 0.1,
+#  metric = "jaccard", n_components = 2, nn_method = "nndescent", seed = n_inicial) |> as.data.frame() |>
+#  mutate(ticket = negativas_codificadas$ticket)
+# 
+# umap_pc <- uwot::umap( select(positivas_codificadas,where(is.integer)), n_neighbors = 10, min_dist = 0.1, 
+#  metric = "jaccard", n_components = 2, nn_method = "nndescent", seed = n_inicial) |> as.data.frame() |>
+#  mutate(ticket = positivas_codificadas$ticket)
+# 
+# set.seed(n_inicial)
+# gap_stat_nc <- clusGap(select(umap_nc,where(is.numeric)), FUNcluster = pam, K.max = 10, B = 500, verbose = F, 
+#  spaceH0 = "original")
+# gap_stat_pc <- clusGap(select(umap_pc,where(is.numeric)), FUNcluster = pam, K.max = 10, B = 500, verbose = F, 
+#  spaceH0 = "original")
+```
+
+```{r}
+# metodo_cluster <- c("firstSEmax", "Tibs2001SEmax", "globalSEmax", "firstmax", "globalmax")
+# k_ideal_nc <- maxSE(gap_stat_nc$Tab[, "gap"], gap_stat_nc$Tab[, "SE.sim"], method = metodo_cluster[4])
+# k_ideal_pc <- maxSE(gap_stat_pc$Tab[, "gap"], gap_stat_pc$Tab[, "SE.sim"], method = metodo_cluster[4])
+# glue::glue("Nº clusters ideal negativas: {k_ideal_nc}. Nº clusters ideal positivas: {k_ideal_pc}.")
+```
+
+```{r}
+# plot(gap_stat_nc, main = "Estatística Gap para PAM")
+```
+
+```{r}
+# plot(gap_stat_pc, main = "Estatística Gap para PAM")
+```
+
+```{r}
+# umap_nc$cluster <- as.factor(pam(select(umap_nc,where(is.numeric)), k = k_ideal_nc)$clustering)
+# umap_pc$cluster <- as.factor(pam(select(umap_pc,where(is.numeric)), k = k_ideal_pc)$clustering)
+# negativas_codificadas$cluster <- umap_nc$cluster
+# positivas_codificadas$cluster <- umap_pc$cluster
+```
+
+```{r}
+# minhas_cores <- cores <- c("1"="#5050FFFF","2"="#CE3D32FF","3"="#749B58FF","4"="#F0E685FF","5"="#466983FF")
+# G_nc <- ggplot(umap_nc, aes(x = V1, y = V2, label = ticket, colour = cluster)) +
+# geom_point(size = 1, alpha = 0.7) +
+# geom_text(vjust=1.5,size = 2)+
+# #theme_minimal() +
+# labs(title = "Visualização UMAP dos Clusters PAM (correlação negativa)",x = "Dimensão 1", y = "Dimensão 2") +
+# theme_bw() +
+# theme(
+#  axis.text = element_text(size=tamanho_eixos,face="bold"),
+#  axis.title = element_text(size=tamanho_eixos,face="bold"),
+#  strip.text = element_text(size=tamanho_eixos,face="bold"),
+#  title = element_text(size=tamanho_eixos,face="bold"),
+#  legend.position = "right" #, legend.title = element_blank()
+# )
+# G_nc <- G_nc + stat_ellipse(aes(fill = cluster), geom = "polygon", alpha = 0.2, level = 0.95) + 
+#   scale_colour_manual(values = minhas_cores) + scale_fill_manual(values = minhas_cores)
+# G_nc 
+```
+
+```{r}
+# G_pc <- ggplot(umap_pc, aes(x = V1, y = V2, label = ticket, colour=cluster)) +
+# geom_point(size = 1, alpha = 0.7) +
+# geom_text(vjust=1.5,size=2)+
+# #theme_minimal() +
+# labs(title = "Visualização UMAP dos Clusters PAM (correlação positiva)",x = "Dimensão 1", y = "Dimensão 2")+
+# theme_bw() +
+# theme(
+#  axis.text = element_text(size=tamanho_eixos,face="bold"),
+#  axis.title = element_text(size=tamanho_eixos,face="bold"),
+#  strip.text = element_text(size=tamanho_eixos,face="bold"),
+#  title = element_text(size=tamanho_eixos,face="bold"),
+#  legend.position = "right"
+# )
+# G_pc <- G_pc + stat_ellipse(aes(fill = cluster), geom = "polygon", alpha = 0.2, level = 0.95) + 
+#   scale_colour_manual(values = minhas_cores) + scale_fill_manual(values = minhas_cores)
+# G_pc 
+```
+
+# Análise de frequência das categorias ESG por tipo de correlação
+
+## Correlações negativas
+
+```{r}
+# negativas_codificadas |>
+# summarise(across(where(is.integer), sum, na.rm = TRUE),.by = cluster) |> 
+# pivot_longer(-cluster,names_to = "ESG",values_to = "Freq") |>
+# mutate(Prop = round(Freq / sum(Freq)*100,1),.by = cluster) |> 
+# knitr::kable(
+#  format = formato_tbl,
+#  #digits = 3,
+#  table.attr = "style='color: white;'",
+#  #align = "rrrrr"
+# )
+```
+
+## Correlações positivas
+
+```{r}
+# positivas_codificadas |>
+# summarise(across(where(is.integer), sum, na.rm = TRUE),.by = cluster) |> 
+# pivot_longer(-cluster,names_to = "ESG",values_to = "Freq") |>
+# mutate(Prop = round(Freq / sum(Freq)*100,1),.by = cluster) |> 
+# knitr::kable(
+# format = formato_tbl,
+#  #digits = 3,
+#  table.attr = "style='color: white;'",
+#  #align = "rrrrr"
+# )
+```
