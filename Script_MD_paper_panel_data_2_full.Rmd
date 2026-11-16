@@ -77,9 +77,7 @@ mutate(
 
 ## Cálculo das correlações correlações para bd_com
 
-Aqui são calculadas as correlações de Pearson entre todas as variáveis presentes em *bd*. Os calculos foram paralelizados pelo uso da função *future_map_dfr* para acelerar o processamento.
-
-Também aqui são selecionadas todas as correlações que sejam maiores que 0.77 (em valores absolutos), com significância estatística de 5%. A escolha desse limiar se dá porque ele ao quadrado representa o coeficiente de determinação (R²), indicando, pelo menos, 60% de explicação da variância de um modelo de regressão linear simples.
+Aqui são calculadas as correlações de Pearson entre todas as variáveis presentes em *bd*. Os calculos foram paralelizados pelo uso da função *future_map_dfr* para acelerar o processamento. Aqui são selecionadas todas as correlações com significância estatística de 5%.
 
 ```{r message=FALSE, warning=FALSE}
 # Função para calcular as correlações, p-valores e R²

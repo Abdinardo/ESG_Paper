@@ -1,0 +1,121 @@
+ID	Continent	Ticket	Country	Company Name	Leading Business	Sector (GICS)	Industry (GICS)
+1	Africa	AFEJ.J	South Africa	AECI Ltd	Explosives and Specialty Chemicals	Materials	Chemicals
+2	Africa	AELJ.J	South Africa	Altron (Allied Electronics)	IT Services and Telecommunications	Information Technology	Electronic Equipment, Instruments & Components
+3	Africa	AEGJ.J	South Africa	Aveng Ltd	Infrastructure and Mining Construction	Industrials	Construction & Engineering
+4	Africa	AVIJ.J	South Africa	AVI Ltd	Branded Consumer Products	Consumer Staples	Food, Beverage & Tobacco
+5	Africa	CSBJ.J	South Africa	Cashbuild	Building Materials Retail	Consumer Discretionary	Specialty Retail
+6	Africa	CLSJ.J	South Africa	Clicks Group	Health and Beauty Retail	Consumer Staples	Consumer Staples Distribution & Retail
+7	Africa	EQUJ.J	South Africa	Equites Property Fund	Logistics and Commercial Real Estate	Real Estate	Industrial REITs
+8	Africa	GPLJ.J	South Africa	Grand Parade Investments	Food and Entertainment Franchising	Consumer Discretionary	Hotels, Restaurants & Leisure
+9	Africa	HARJ.J	South Africa	Harmony Gold Mining	Gold Mining and Exploration	Materials	Metals & Mining
+10	Africa	HDCJ.J	South Africa	Hudaco Industries	Engineering Consumables Distribution	Industrials	Trading Companies & Distributors
+11	Africa	HYPJ.J	South Africa	Hyprop Investments	Shopping Center Real Estate	Real Estate	Retail REITs
+12	Africa	IVTJ.J	South Africa	Invicta Holdings	Industrial and Agricultural Machinery	Industrials	Machinery
+13	Africa	KAPJ.J	South Africa	KAP Industrial Holdings	Diversified Logistics and Manufacturing	Industrials	Industrial Conglomerates
+14	Africa	MCGJ.J	South Africa	MultiChoice Group	Video Entertainment and Broadcasting	Communication Services	Media
+15	Africa	NPNJn.J	South Africa	Naspers	E-commerce and Technology Investments	Consumer Discretionary	Broadline Retail
+16	Africa	NPHJ.J	South Africa	Northam Platinum	Platinum Group Metals Mining	Materials	Metals & Mining
+17	Africa	SOLJ.J	South Africa	Sasol	Integrated Energy and Chemicals	Energy	Oil, Gas & Consumable Fuels
+18	Africa	TKGJ.J	South Africa	Telkom SA	Fixed-line and Mobile Telecommunications	Communication Services	Diversified Telecommunication Services
+19	Africa	TONJ.J	South Africa	Tongaat Hulett	Sugar and Starch Production	Consumer Staples	Food, Beverage & Tobacco
+20	Africa	VODJ.J	South Africa	Vodacom Group	Mobile Communications Services	Communication Services	Wireless Telecommunication Services
+21	Asia	ASTR.KL	Malaysia	Astro Malaysia Holdings	Media and Entertainment	Communication Services	Media
+22	Asia	BERA.KL	Malaysia	Berjaya Corp Bhd	Consumer Services, Property, and Gaming	Industrials	Industrial Conglomerates
+23	Asia	IOIP.KL	Malaysia	IOI Properties Group	Property Development and Investment	Real Estate	Real Estate Management & Development
+24	Asia	SAEN.KL	Malaysia	Sapura Energy	Offshore Oil and Gas Services	Energy	Energy Equipment & Services
+25	Asia	SDGU.KL	Malaysia	SD Guthrie Bhd	Agribusiness and Palm Oil	Consumer Staples	Food, Beverage & Tobacco
+26	Asia	042660.KS	South Korea	Hanwha Ocean	Shipbuilding and Offshore Engineering	Industrials	Aerospace & Defense
+27	Asia	001230.KS	South Korea	Dongkuk Steel Mill Co Ltd	Steel Manufacturing	Materials	Metals & Mining
+28	Asia	000150.KS	South Korea	Doosan Co Ltd	Heavy Machinery and Construction Equipment	Industrials	Industrial Conglomerates
+29	Asia	139480.KS	South Korea	E-MART Inc	Discount Retail Stores	Consumer Staples	Consumer Staples Distribution & Retail
+30	Asia	267250.KS	South Korea	HD Hyundai Heavy Industries	Shipbuilding and Heavy Machinery	Industrials	Machinery
+31	Asia	084990.KQ	South Korea	Helixmith Co Ltd	Biopharmaceuticals and Gene Therapy	Health Care	Pharmaceuticals
+32	Asia	060980.KS	South Korea	HL Mando (Mando Corp)	Automotive Parts Manufacturing	Consumer Discretionary	Automobile Components
+33	Asia	035250.KS	South Korea	Kangwon Land Inc	Casino and Resort Operations	Consumer Discretionary	Hotels, Restaurants & Leisure
+34	Asia	015760.KS	South Korea	Korea Electric Power Corp (KEPCO)	Electric Power Generation and Transmission	Utilities	Electric Utilities
+35	Asia	011780.KS	South Korea	Kumho Petrochemical Co Ltd	Synthetic Rubbers and Chemicals	Materials	Chemicals
+36	Asia	066570.KS	South Korea	LG Electronics Inc	Consumer Electronics and Appliances	Consumer Discretionary	Household Durables
+37	Asia	011170.KS	South Korea	Lotte Chemical Corp	Petrochemical Product Manufacturing	Materials	Chemicals
+38	Asia	004990.KS	South Korea	Lotte Chilsung Beverage Co Ltd	Beverages and Liquor Production	Consumer Staples	Beverages
+39	Asia	263750.KQ	South Korea	Pearl Abyss Corp	Video Game Development	Communication Services	Entertainment
+40	Asia	010950.KS	South Korea	S-Oil Corp	Petroleum Refining and Marketing	Energy	Oil, Gas & Consumable Fuels
+41	Asia	028260.KS	South Korea	Samsung C&T Corp	Construction, Trade, and Fashion	Industrials	Industrial Conglomerates
+42	Asia	009150.KS	South Korea	Samsung Electro-Mechanics Co	Electronic Components and Displays	Information Technology	Electronic Equipment, Instruments & Components
+43	Asia	AP.BK	Thailand	AP Thailand PCL	Residential Property Development	Real Estate	Real Estate Management & Development
+44	Asia	AWC.BK	Thailand	Asset World Corp PCL	Hospitality and Commercial Real Estate	Real Estate	Real Estate Management & Development
+45	Asia	BGRIM.BK	Thailand	B.Grimm Power PCL	Industrial Power Generation	Utilities	Independent Power and Renewable Electricity Producers
+46	Asia	BDMS.BK	Thailand	Bangkok Dusit Medical Services	Private Hospital Operations	Health Care	Health Care Providers & Services
+47	Asia	BPP.BK	Thailand	Banpu Power	Thermal and Renewable Power Generation	Utilities	Independent Power and Renewable Electricity Producers
+48	Asia	BCPG.BK	Thailand	BCPG PCL	Renewable Energy Operations	Utilities	Independent Power and Renewable Electricity Producers
+49	Asia	BEC.BK	Thailand	BEC World PCL	Television Broadcasting and Media	Communication Services	Media
+50	Asia	BJC.BK	Thailand	Berli Jucker	Consumer Products and Packaging	Consumer Staples	Consumer Staples Distribution & Retail
+51	Asia	BH.BK	Thailand	Bumrungrad Hospital	Private Healthcare and Medical Services	Health Care	Health Care Providers & Services
+52	Asia	CENTEL.BK	Thailand	Central Plaza Hotel	Hotel and Restaurant Operations	Consumer Discretionary	Hotels, Restaurants & Leisure
+53	Asia	CRC.BK	Thailand	Central Retail Corp	Multi-Format Retail Management	Consumer Discretionary	Broadline Retail
+54	Asia	EPG.BK	Thailand	Eastern Polymer Group	Polymer and Plastic Products	Materials	Chemicals
+55	Asia	EASTW.BK	Thailand	Eastern Water Resources	Water Treatment and Distribution	Utilities	Water Utilities
+56	Asia	GFPT.BK	Thailand	GFPT PCL	Poultry and Feed Processing	Consumer Staples	Food, Beverage & Tobacco
+57	Asia	GULF.BK	Thailand	Gulf Energy Development	Power Generation and Infrastructure	Utilities	Independent Power and Renewable Electricity Producers
+58	Asia	HMPRO.BK	Thailand	Home Product Center	Home Improvement Retailing	Consumer Discretionary	Specialty Retail
+59	Asia	KEX.BK	Thailand	Kerry Express Thailand	Parcel Delivery and Logistics	Industrials	Air Freight & Logistics
+60	Asia	NRF.BK	Thailand	NR Instant Produce	Condiments and Vegan Food Production	Consumer Staples	Food, Beverage & Tobacco
+61	Asia	PLANB.BK	Thailand	Plan B Media	Out-of-Home Advertising	Communication Services	Media
+62	Asia	PSH.BK	Thailand	Pruksa Holding	Real Estate Development and Healthcare	Real Estate	Real Estate Management & Development
+63	Asia	OR.BK	Thailand	PTT Oil and Retail Business	Fuel Stations and Retail Cafes	Energy	Oil, Gas & Consumable Fuels
+64	Asia	RBF.BK	Thailand	R&B Food Supply	Food Ingredients and Additives	Consumer Staples	Food, Beverage & Tobacco
+65	Asia	RS.BK	Thailand	RS PCL	Entertainment and Commerce Sales	Communication Services	Media
+66	Asia	SIRI.BK	Thailand	Sansiri	Property Development and Hospitality	Real Estate	Real Estate Management & Development
+67	Asia	SCGP.BK	Thailand	SCG Packaging	Paper and Packaging Solutions	Materials	Containers & Packaging
+68	Asia	STGT.BK	Thailand	Sri Trang Gloves	Rubber Glove Manufacturing	Health Care	Health Care Equipment & Supplies
+69	Asia	SPRC.BK	Thailand	Star Petroleum Refining	Petroleum Refining	Energy	Oil, Gas & Consumable Fuels
+70	Asia	THAI.BK	Thailand	Thai Airways	International Passenger and Cargo Aviation	Industrials	Passenger Airlines
+71	Asia	THCOM.BK	Thailand	Thaicom	Satellite Operations and Services	Communication Services	Diversified Telecommunication Services
+72	Asia	TOA.BK	Thailand	TOA Paint	Decorative Paint and Coatings	Materials	Chemicals
+73	Asia	VGI.BK	Thailand	VGI PCL	Transit and Offline/Online Advertising	Communication Services	Media
+74	Asia	WHAUP.BK	Thailand	WHA Utilities and Power	Industrial Utilities and Energy Services	Utilities	Multi-Utilities
+75	Asia	ADNOCDIST.AD	United Arab Emirates	ADNOC Distribution	Fuel Distribution and Convenience Stores	Energy	Oil, Gas & Consumable Fuels
+76	Asia	ALDAR.AD	United Arab Emirates	Aldar Properties	Real Estate Development and Management	Real Estate	Real Estate Management & Development
+77	Asia	DINV.DU	United Arab Emirates	Dubai Investments	Diversified Investments and Property	Financials	Financial Services
+78	Asia	EAND.AD	United Arab Emirates	E& (Emirates Telecommunications)	Telecommunications and Technology Solutions	Communication Services	Diversified Telecommunication Services
+79	Asia	EMAARDEV.DU	United Arab Emirates	Emaar Development	Property Development and Real Estate	Real Estate	Real Estate Management & Development
+80	Europe	AEFES.IS	Turkey	Anadolu Efes	Beer and Soft Drink Beverage Production	Consumer Staples	Beverages
+81	Europe	AYGAZ.IS	Turkey	Aygaz AS	LPG Distribution and Refining	Utilities	Gas Utilities
+82	Europe	BIZIM.IS	Turkey	Bizim Toptan	Wholesale Food Retailing	Consumer Staples	Consumer Staples Distribution & Retail
+83	Europe	CIMSA.IS	Turkey	Cimsa Cimento	Cement and Construction Materials	Materials	Construction Materials
+84	Europe	CCOLA.IS	Turkey	Coca-Cola Icecek	Beverage Bottling and Distribution	Consumer Staples	Beverages
+85	Europe	EKGYO.IS	Turkey	Emlak Konut REIT	Real Estate and Property Development	Real Estate	Real Estate Management & Development
+86	Europe	MAVI.IS	Turkey	Mavi Giyim	Denim and Apparel Retailing	Consumer Discretionary	Specialty Retail
+87	Europe	MPARK.IS	Turkey	MLP Care (Medical Park)	Private Hospital Operations	Health Care	Health Care Providers & Services
+88	Europe	OTKAR.IS	Turkey	Otokar	Commercial and Military Vehicles	Industrials	Machinery
+89	Europe	PETKM.IS	Turkey	Petkim	Petrochemicals Manufacturing	Materials	Chemicals
+90	Europe	SOKM.IS	Turkey	Sok Marketler	Discount Grocery Retailing	Consumer Staples	Consumer Staples Distribution & Retail
+91	Europe	TATGD.IS	Turkey	Tat Gida	Processed Food and Tomato Products	Consumer Staples	Food, Beverage & Tobacco
+92	Europe	TAVHL.IS	Turkey	TAV Havalimanlari	Airport Operations and Management	Industrials	Transportation Infrastructure
+93	Europe	TCELL.IS	Turkey	Turkcell	Mobile Telecommunications Services	Communication Services	Wireless Telecommunication Services
+94	Europe	BMNB.L	United Kingdom	Bushveld Minerals	Vanadium Mining and Energy Storage	Materials	Metals & Mining
+95	Europe	FRES.L	United Kingdom	Fresnillo plc	Precious Metals Mining (Silver and Gold)	Materials	Metals & Mining
+96	North America	ALEATIC.MX	Mexico	Aleatica	Toll Road and Highway Infrastructure	Industrials	Transportation Infrastructure
+97	North America	AMXB.MX	Mexico	America Movil	Wireless Telecommunications Services	Communication Services	Wireless Telecommunication Services
+98	North America	AC.MX	Mexico	Arca Continental	Beverage Bottling and Distribution	Consumer Staples	Beverages
+99	North America	LIVEPOLC1.MX	Mexico	El Puerto de Liverpool	Department Stores and Consumer Credit	Consumer Discretionary	Broadline Retail
+100	North America	FEMSAUBD.MX	Mexico	FEMSA	Retail Operations and Beverages	Consumer Staples	Beverages
+101	North America	BIMBOA.MX	Mexico	Grupo Bimbo	Bakery and Food Processing	Consumer Staples	Food, Beverage & Tobacco
+102	North America	PEOLES.MX	Mexico	Industrias Penoles	Non-ferrous Metals and Chemical Mining	Materials	Metals & Mining
+103	North America	NEMAKA.MX	Mexico	Nemak	Automotive Aluminum Components	Consumer Discretionary	Automobile Components
+104	South America	AFYA.OQ	Brazil	Afya Ltd	Medical Education and Digital Services	Consumer Discretionary	Consumer Services
+105	South America	ABEV3.SA	Brazil	Ambev	Beer and Beverage Production	Consumer Staples	Beverages
+106	South America	AZZA3.SA	Brazil	Azzas 2154	Footwear, Apparel & Accessories	Consumer Discretionary	Textiles, Apparel & Luxury Goods
+107	South America	BRFS3.SA	Brazil	BRF SA	Meat Processing and Food Production	Consumer Staples	Food, Beverage & Tobacco
+108	South America	BHIA3.SA	Brazil	Casas Bahia	Consumer Electronics and Furniture Retail	Consumer Discretionary	Specialty Retail
+109	South America	CCRO3.SA	Brazil	CCR SA	Highway Concessions and Mobility	Industrials	Transportation Infrastructure
+110	South America	CMIG4.SA	Brazil	CEMIG	Electric Utility Generation and Distribution	Utilities	Electric Utilities
+111	South America	CYRE3.SA	Brazil	Cyrela Brazil Realty	Homebuilding and Property Development	Real Estate	Real Estate Management & Development
+112	South America	ELET6.SA	Brazil	Eletrobras	Electric Utility Generation and Transmission	Utilities	Electric Utilities
+113	South America	EMBR3.SA	Brazil	Embraer	Aerospace Engineering and Aircraft Manufacturing	Industrials	Aerospace & Defense
+114	South America	EVEN3.SA	Brazil	Even Construtora	Real Estate Construction and Development	Real Estate	Real Estate Management & Development
+115	South America	FLRY3.SA	Brazil	Fleury	Medical Diagnostics and Healthcare Clinics	Health Care	Health Care Providers & Services
+116	South America	GFSA3.SA	Brazil	Gafisa	Homebuilding and Real Estate Development	Real Estate	Real Estate Management & Development
+117	South America	JBSS3.SA	Brazil	JBS SA	Meat Processing and Food Production	Consumer Staples	Food, Beverage & Tobacco
+118	South America	OIBR4.SA	Brazil	Oi SA	Telecommunications and Fiber Broadband	Communication Services	Diversified Telecommunication Services
+119	South America	PDGR3.SA	Brazil	PDG Realty	Property Development and Management	Real Estate	Real Estate Management & Development
+120	South America	TEND3.SA	Brazil	Tenda Construtora	Low-Income Housing Construction	Real Estate	Real Estate Management & Development
